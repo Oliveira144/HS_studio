@@ -262,8 +262,20 @@ def gerar_sugestoes(sequence_list, resultados_encontrados):
     if resultados_encontrados.get("1. Sequência (Surf de Cor)"):
         for res in resultados_encontrados["1. Sequência (Surf de Cor)"]:
             # Se a última ocorrência faz parte de uma sequência de surf, sugere continuar
-            if ultima_ocorrencia and f"Sequência de '{ultima_ocorrencia}'" in res and res.endswith(f"posição {len(sequence_list)-2}."):
-                sugestoes.append(f"**Sugestão:** Continuar o 'Surf de Cor' de **'{ultima_ocorrencia}'**.")
+            # Reforçando a condição para que a sugestão seja relevante para o FINAL da sequência
+            if ultima_ocorrencia and f"Sequência de '{ultima_ocorrencia}'" in res:
+                # Extrai a posição de início do padrão
+                try:
+                    start_pos_str = res.split("iniciando na posição ")[-1].replace(".", "")
+                    start_pos = int(start_pos_str)
+                    pattern_length_str = res.split("por ")[-1].split(" vezes")[0]
+                    pattern_length = int(pattern_length_str)
+
+                    # Verifica se o padrão de surf termina na última ou penúltima posição
+                    if (start_pos + pattern_length - 1) == len(sequence_list):
+                         sugestoes.append(f"**Sugestão:** Continuar o 'Surf de Cor' de **'{ultima_ocorrencia}'**.")
+                except ValueError:
+                    pass # Ignora se a string de posição não for um número válido
 
     if resultados_encontrados.get("2. Zig-Zag"):
         # Verifica se o padrão Zig-Zag está nos últimos 2-4 elementos
@@ -297,4 +309,105 @@ def gerar_sugestoes(sequence_list, resultados_encontrados):
             sugestoes.append(f"**Considerar:** Padrão de 'Duplas Repetidas' (Ex: AABB). Pode haver uma nova dupla ou quebra de padrão.")
 
     if resultados_encontrados.get("6. Empate recorrente"):
-        if resultados_en
+        if resultados_encontrados["6. Empate recorrente"]: # Verifica se há empates recorrentes detectados
+            possibilidades_empate.append("**Alta Possibilidade:** 'Empate' devido à recorrência.")
+            sugestoes.append("Considerar 'Empate' devido à recorrência.")
+
+    if resultados_encontrados.get("8. Espelho"):
+        if ultima_ocorrencia and len(sequence_list) >= 4 and \
+           sequence_list[-4] == ultima_ocorrencia and \
+           sequence_list[-3] == penultima_ocorrencia:
+            sugestoes.append(f"**Sugestão:** Padrão 'Espelho' detectado. Próximo pode inverter ou ser similar ao início ('{penultima_ocorrencia}').")
+
+    if resultados_encontrados.get("9. Alternância com empate no meio"):
+        if ultima_ocorrencia and penultima_ocorrencia and len(sequence_list) >= 3 and \
+           sequence_list[-2] == 'E' and ultima_ocorrencia != 'E' and sequence_list[-3] != 'E' and \
+           sequence_list[-3] != ultima_ocorrencia:
+            possibilidades_empate.append(f"**Possibilidade:** 'Empate' como meio de alternância. (Ex: {sequence_list[-3]}, E, {ultima_ocorrencia})")
+            sugestoes.append("Considerar 'Empate' devido à alternância com empate no meio.")
+
+    if resultados_encontrados.get("10. Padrão 'onda'"):
+        if ultima_ocorrencia and penultima_ocorrencia and \
+           len(sequence_list) >= 4 and \
+           sequence_list[-4] == penultima_ocorrencia and \
+           sequence_list[-3] == ultima_ocorrencia:
+            sugestoes.append(f"**Sugestão:** Continuar o 'Padrão Onda' com **'{penultima_ocorrencia}'**.")
+
+    if resultados_encontrados.get("12. Padrão 3x1"):
+        if ultima_ocorrencia and len(sequence_list) >= 4 and \
+           sequence_list[-4] == sequence_list[-3] == sequence_list[-2] and \
+           sequence_list[-1] != sequence_list[-4]:
+            sugestoes.append(f"**Atenção:** Padrão 3x1 detectado ('{sequence_list[-4]}' 3x, '{ultima_ocorrencia}' 1x). Pode indicar mudança ou continuação da última.")
+
+    if resultados_encontrados.get("13. Padrão 3x3"):
+        if ultima_ocorrencia and len(sequence_list) >= 6 and \
+           sequence_list[-6] == sequence_list[-5] == sequence_list[-4] and \
+           sequence_list[-3] == sequence_list[-2] == sequence_list[-1] and \
+           sequence_list[-6] != sequence_list[-3]:
+            sugestoes.append(f"**Atenção:** Padrão 3x3 detectado. Fim de um ciclo (3x '{sequence_list[-6]}', 3x '{sequence_list[-3]}'). Pode iniciar nova tendência.")
+
+    # Sugestões gerais sobre Empate
+    empate_count = sequence_list.count('E')
+    total_results = len(sequence_list)
+    if total_results > 0:
+        freq_empate = empate_count / total_results
+        if freq_empate > 0.33 and total_results > 3:
+            possibilidades_empate.append("A alta frequência de empates na sequência atual sugere maior probabilidade de novo 'Empate'.")
+        elif empate_count == 0 and total_results > 5:
+            possibilidades_empate.append("Ausência prolongada de empates pode indicar um 'Empate' em breve (lei das médias/compensação).")
+        if total_results >= 2 and ultima_ocorrencia != 'E' and penultima_ocorrencia == 'E':
+            sugestoes.append(f"**Análise Pós-Empate:** O último resultado foi '{ultima_ocorrencia}' após um empate.")
+
+    return sugestoes, possibilidades_empate
+
+# --- Título e Descrição da Aplicação ---
+st.header("Análise de Padrões em Sequências de Resultados")
+st.markdown("Utilize os botões abaixo para inserir os resultados (Casa, Visitante, Empate) e a análise será **automática**.")
+
+# --- Layout Principal: Colunas para Entrada/Sequência e Sugestões/Resultados ---
+col_input_seq, col_suggestions_results = st.columns([1, 2])
+
+with col_input_seq:
+    st.subheader("➕ Inserir Resultado")
+    st.markdown("Clique para adicionar à sequência atual:")
+
+    btn_col1, btn_col2, btn_col3 = st.columns(3)
+    with btn_col1:
+        if st.button("Casa (C)", use_container_width=True, key="btn_casa"):
+            st.session_state.current_sequence.append('C')
+            st.rerun() # Dispara a reexecução e análise automática
+    with btn_col2:
+        if st.button("Visitante (V)", use_container_width=True, key="btn_visitante"):
+            st.session_state.current_sequence.append('V')
+            st.rerun() # Dispara a reexecução e análise automática
+    with btn_col3:
+        if st.button("Empate (E)", use_container_width=True, key="btn_empate"):
+            st.session_state.current_sequence.append('E')
+            st.rerun() # Dispara a reexecução e análise automática
+
+    st.markdown("---")
+    st.subheader("Ações da Sequência")
+    if st.button("↩️ Desfazer Último", use_container_width=True, key="btn_undo"):
+        if st.session_state.current_sequence:
+            st.session_state.current_sequence.pop()
+            st.success("Último resultado desfeito!")
+            st.rerun()
+        else:
+            st.warning("Sequência vazia. Nada para desfazer.")
+    if st.button("🔄 Limpar Sequência Atual", use_container_width=True, key="btn_clear_current"):
+        st.session_state.current_sequence = []
+        st.success("Sequência atual limpa!")
+        st.rerun()
+
+    st.markdown("---")
+    st.subheader("📊 Sequência Atual")
+    if st.session_state.current_sequence:
+        current_seq_str = "".join(st.session_state.current_sequence)
+
+        # Geração e formatação dos índices e da sequência para alinhamento visual
+        # Isso é uma tentativa de simular um alinhamento monospace em Streamlit st.code
+        # que pode não ser perfeito devido a largura de caracteres de números > 9.
+        
+        # Cria uma linha de índices e uma linha de resultados
+        # Cada caractere na sequência tem um espaço, para alinhamento visual com os índices
+        formatted_indices
