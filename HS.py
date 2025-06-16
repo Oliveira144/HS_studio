@@ -1,14 +1,12 @@
 import streamlit as st
-import numpy as np
+import numpy as np # Ainda útil para algumas operações, mas não para o modelo de ML
 from collections import Counter
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split, cross_val_score
-from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
-import pandas as pd # Importar pandas para facilitar manipulação de dados
+import pandas as pd # Ainda útil para manipulação de dados e visualização
 
 # --- Funções de Ajuda ---
 def resultado_para_numerico(resultado):
-    """Converte 'C', 'V', 'E' para valores numéricos."""
+    """Converte 'C', 'V', 'E' para valores numéricos.
+       Mantido para compatibilidade, mas pode ser removido se não for mais necessário."""
     if resultado == 'C': return 1 # Casa
     if resultado == 'V': return 2 # Visitante
     if resultado == 'E': return 0 # Empate
@@ -32,7 +30,8 @@ def detectar_padroes_inteligente(hist, janela_min=2, janela_max=4):
         return [], None, None
 
     todos_padroes = {} # Dicionário para armazenar padrões por tamanho de janela
-    ultima_sequencia = tuple(hist[-(janela_max-1):]) # Últimos N-1 resultados para a recomendação
+    # Ajuste para a última sequência para cobrir todas as janelas analisadas
+    ultima_sequencia_maior = tuple(hist[-(janela_max-1):]) if janela_max > 1 else ()
 
     for janela in range(janela_min, janela_max + 1):
         if len(hist) < janela:
@@ -40,13 +39,14 @@ def detectar_padroes_inteligente(hist, janela_min=2, janela_max=4):
         sequencias = [tuple(hist[i:i+janela]) for i in range(len(hist) - janela + 1)]
         contagem = Counter(sequencias)
         # Filtra padrões que ocorrem mais de uma vez ou que são muito frequentes
-        padroes_encontrados = {seq: freq for seq, freq in contagem.items() if freq > 1 or freq >= len(sequencias) * 0.3}
+        # Padrões que ocorrem mais de 2 vezes OU são mais de 25% das ocorrências
+        padroes_encontrados = {seq: freq for seq, freq in contagem.items() if freq > 1 or (len(sequencias) > 0 and freq >= len(sequencias) * 0.25)}
         if padroes_encontrados:
             todos_padroes[janela] = padroes_encontrados
 
     recomendacao_candidatos = Counter()
     for janela, padroes_na_janela in todos_padroes.items():
-        # Ajusta o slice para a última sequência de acordo com a janela
+        # A parte da sequência final precisa ser ajustada para cada janela
         ult = tuple(hist[-(janela-1):]) if janela > 1 else ()
 
         for seq, freq in padroes_na_janela.items():
@@ -64,100 +64,60 @@ def detectar_padroes_inteligente(hist, janela_min=2, janela_max=4):
 
     # Formatar os padrões para exibição
     padroes_exibicao = []
-    for janela, pats in todos_padroes.items():
-        for p in pats:
+    for janela in sorted(todos_padroes.keys()): # Ordenar para exibição consistente
+        for p in todos_padroes[janela]:
             padroes_exibicao.append(f"{''.join(p)} (tam {janela})")
 
     return padroes_exibicao, sugestao, confianca
 
-
-def prever_empate_inteligente(dados):
+def prever_empate_estatistico(dados, janela_analise=10, tendencia_peso=0.5):
     """
-    Função de previsão com Random Forest, usando mais features e avaliações.
+    Prevê a chance de empate com base em estatísticas simples:
+    - Frequência geral de empates nos últimos N jogos.
+    - Análise de tendências (e.g., se houver muitos "CECE" ou "VEVE").
     """
-    if len(dados) < 30: # Aumentar o mínimo de dados para melhor treinamento
-        return 0.0, "Poucos dados para análise robusta."
+    if len(dados) < 10: # Mínimo de dados para análise estatística
+        return 0.0, "Histórico muito curto para análise estatística de empates."
 
-    X = [] # Features
-    y = [] # Labels (0 para não empate, 1 para empate)
+    # Frequência de empates nos últimos 'janela_analise' jogos
+    ultimos_dados = dados[-janela_analise:]
+    contagem_ultimos = Counter(ultimos_dados)
+    frequencia_empate = (contagem_ultimos['E'] / len(ultimos_dados)) * 100 if ultimos_dados else 0.0
 
-    # Geração de Features Aprimorada:
-    # Vamos considerar os últimos 5 resultados, além de contagens de resultados recentes.
-    for i in range(len(dados) - 6): # Necessita 5 resultados anteriores + 1 para o label
-        janela_base = dados[i:i+5] # Janela de 5 resultados
-        label = 1 if dados[i+5] == 'E' else 0 # O resultado que estamos tentando prever
-
-        # Converte a janela para numérico
-        janela_numerica = [resultado_para_numerico(x) for x in janela_base]
-
-        # Features básicas da janela
-        features = janela_numerica[:]
-
-        # Contagem de C, V, E na janela
-        contagem_janela = Counter(janela_base)
-        features.extend([contagem_janela['C'], contagem_janela['V'], contagem_janela['E']])
-
-        # Adiciona features ao conjunto X e label ao conjunto y
-        X.append(features)
-        y.append(label)
-
-    if not any(y): # Se não houver nenhum empate nos dados, o modelo não pode aprender a prever empates
-        return 0.0, "Não há empates suficientes no histórico para treinamento do modelo."
-    if len(np.unique(y)) < 2: # Garante que há pelo menos 2 classes (empate e não empate)
-        return 0.0, "Dados insuficientes de ambas as classes (empate/não empate) para treinamento."
-
-    # Usar DataFrame para X para melhor visualização e manipulação se necessário
-    feature_names = [f'res_{i+1}' for i in range(5)] + ['count_C', 'count_V', 'count_E']
-    X_df = pd.DataFrame(X, columns=feature_names)
-
-    # Dividir dados em treino e teste
-    # Garantir que X e y têm o mesmo número de amostras
-    min_samples = min(len(X_df), len(y))
-    X_train, X_test, y_train, y_test = train_test_split(
-        X_df.iloc[:min_samples], y[:min_samples], test_size=0.25, random_state=42, stratify=y
-    )
-    # Usar stratify=y ajuda a manter a proporção de classes (empate/não empate) no treino/teste
-
-    modelo = RandomForestClassifier(n_estimators=100, random_state=42, class_weight='balanced')
-    # n_estimators: mais árvores, melhor performance (mas mais lento)
-    # class_weight='balanced': Ajuda a lidar com o desbalanceamento de classes (geralmente poucos empates)
-
-    modelo.fit(X_train, y_train)
-
-    # Previsão para o último conjunto de dados disponível
-    # Usar os 5 últimos resultados para a previsão mais recente
-    if len(dados) < 5:
-        return 0.0, "Histórico muito curto para previsão inteligente."
-
-    ultimos_resultados = dados[-5:]
-    ultimos_features_numericos = [resultado_para_numerico(x) for x in ultimos_resultados]
-    contagem_ultimos = Counter(ultimos_resultados)
-    ultimos_features_complementares = [contagem_ultimos['C'], contagem_ultimos['V'], contagem_ultimos['E']]
-
-    pred_input = np.array(ultimos_features_numericos + ultimos_features_complementares).reshape(1, -1)
+    # Análise de tendência (ex: "CE", "VE", "EC", "EV" nos últimos N jogos)
+    # Procurar por padrões que possam indicar alternância para empate
+    tendencia_score = 0
+    # Pontos para sequências que terminam em E ou que são de alternância
+    if len(dados) >= 2:
+        if dados[-1] == 'E': # Se o último já foi empate, talvez menos provável (ou mais, dependendo do jogo)
+            tendencia_score -= 10
+        if dados[-1] == 'C' and dados[-2] == 'E': # Ex: EC
+            tendencia_score += 5
+        if dados[-1] == 'V' and dados[-2] == 'E': # Ex: EV
+            tendencia_score += 5
+        if dados[-1] == 'E' and dados[-2] == 'C': # Ex: CE
+            tendencia_score += 10 # Forte indício de alternância
+        if dados[-1] == 'E' and dados[-2] == 'V': # Ex: VE
+            tendencia_score += 10 # Forte indício de alternância
     
-    chance_predita = 0.0
-    if hasattr(modelo, 'predict_proba'):
-        chance_predita = modelo.predict_proba(pred_input)[0][1] * 100
-    else: # Fallback para modelos que não tem predict_proba
-         chance_predita = modelo.predict(pred_input)[0] * 100 # Isso seria 0 ou 100
+    if len(dados) >= 3:
+        if dados[-1] == 'C' and dados[-2] == 'E' and dados[-3] == 'C': # CEC
+            tendencia_score += 15 # Padrão que "chama" um empate
+        if dados[-1] == 'V' and dados[-2] == 'E' and dados[-3] == 'V': # VEV
+            tendencia_score += 15 # Padrão que "chama" um empate
 
-    # Avaliação do Modelo (para debug/informação)
-    y_pred = modelo.predict(X_test)
-    y_pred_proba = modelo.predict_proba(X_test)[:, 1] # Probabilidade de ser empate
+    # Ajustar a frequência de empate com base na tendência
+    # Limitar o score da tendência para não distorcer muito
+    tendencia_score_ajustado = max(-20, min(tendencia_score, 20)) # Limita a -20 a +20
 
-    acuracia = accuracy_score(y_test, y_pred)
-    # st.write(f"Acurácia do Modelo: {acuracia:.2f}")
-    # st.text("Relatório de Classificação:")
-    # st.text(classification_report(y_test, y_pred))
+    chance_final = frequencia_empate + tendencia_score_ajustado
+    chance_final = max(0, min(chance_final, 100)) # Garante que fique entre 0 e 100
 
-    # st.text("Matriz de Confusão:")
-    # st.dataframe(pd.DataFrame(confusion_matrix(y_test, y_pred)))
+    return round(chance_final, 2), "Análise estatística e de tendência concluída."
 
-    return round(chance_predita, 2), "Análise de IA concluída."
 
 # --- Interface com o usuário ---
-st.set_page_config(page_title="Football Studio HS (Inteligente)", layout="centered", page_icon="⚽") # Ícone mais relevante
+st.set_page_config(page_title="Football Studio HS (Estatístico)", layout="centered", page_icon="⚽")
 st.title("⚽ Inserir Resultado ao Vivo (Football Studio HS)")
 
 # Inicialização do histórico
@@ -207,7 +167,7 @@ else:
 
 st.markdown("---") # Separador visual
 
-st.subheader("📊 Análise Inteligente:")
+st.subheader("📊 Análise Inteligente (Estatística):")
 
 padroes, sugestao, confianca = detectar_padroes_inteligente(st.session_state.historico)
 if padroes:
@@ -215,19 +175,19 @@ if padroes:
 else:
     st.info("Nenhum padrão repetitivo significativo identificado até agora.")
 
-st.markdown("### 🤖 Previsão de Empate com IA")
-chance_empate, msg_ia = prever_empate_inteligente(st.session_state.historico)
+st.markdown("### 🎲 Previsão de Empate (Estatística)")
+chance_empate, msg_prev = prever_empate_estatistico(st.session_state.historico)
 
-if chance_empate > 0.0:
+if chance_empate > 0.0 or "muito curto" not in msg_prev: # Mostra a chance mesmo que seja 0% se houver dados
     st.write(f"📈 Chance de empate na próxima rodada: **{chance_empate:.2f}%**")
-    if chance_empate >= 60:
+    if chance_empate >= 65: # Limiares ajustados para a nova lógica
         st.success("Chance alta de empate!")
     elif chance_empate >= 40:
         st.info("Chance moderada de empate.")
     else:
         st.warning("Chance baixa de empate.")
 else:
-    st.warning(f"Não foi possível gerar uma previsão de empate: {msg_ia}")
+    st.warning(f"Não foi possível gerar uma previsão de empate: {msg_prev}")
 
 
 if sugestao:
