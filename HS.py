@@ -1,134 +1,139 @@
+import streamlit as st
+from collections import deque, Counter
+from itertools import groupby
+import math
 
-importar streamlit como st
-de coleções importar deque, Contador
-de itertools importar groupby
-importar matemática
-tempo de importação
+# --- CONFIGURAÇÕES INICIAIS ---
+st.set_page_config(page_title="Football Studio HS", layout="centered")
+st.title("⚽ Football Studio HS – Analisador Avançado de Padrões")
 
-# CONFIGURAÇÕES INICIAIS
-st.set_page_config(page_title="Estúdio de Futebol HS", layout="centralizado")
-st.title("âš½ Football Studio HS – Analisador Avançado de PadrÃµes")
 st.markdown("""
-<estilo>
-    .element-container botão {
-        altura: 60px !importante;
-        tamanho da fonte: 22px !importante;
+<style>
+    .element-container button {
+        height: 60px !important;
+        font-size: 22px !important;
     }
-</style>""", unsafe_allow_html=True)
+    .stButton>button {
+        background-color: #004AAD;
+        color: white;
+        border-radius: 8px;
+    }
+</style>
+""", unsafe_allow_html=True)
 
-# HISTÓRICO
-histórico = st.session_state.get("histórico", deque(maxlen=300))
+# --- HISTÓRICO ---
+if "historico" not in st.session_state:
+    st.session_state["historico"] = deque(maxlen=300)
+historico = st.session_state["historico"]
 
-# INPUT OTIMIZADO
-st.subheader("ðŸŽ® Inserir resultado ao vivo:")
+# --- INPUT OTIMIZADO ---
+st.subheader("🎮 Inserir Resultado:")
 col1, col2, col3 = st.columns(3)
-if col1.button("ðŸ Casa", key="btn_casa"):
-    histórico.append("C")
-if col2.button("ðŸ¤ Empate", key="btn_empate"):
+if col1.button("🏠 Casa", use_container_width=True):
+    historico.append("C")
+if col2.button("🤝 Empate", use_container_width=True):
     historico.append("E")
-if col3.button("ðŸš© Visitante", key="btn_visitante"):
-    histórico.append("V")
+if col3.button("🚩 Visitante", use_container_width=True):
+    historico.append("V")
 
-# HISTÓRICO VISUAL
-st.subheader("ðŸ“Š Histórico Visual (linhas de 9)")
-linhas = [lista(histórico)[i:i+9] para i em intervalo(0, len(histórico), 9)]
-para linha em linhas:
-    st.markdown(" ".join(f"[{x}]" para x na linha))
+# --- HISTÓRICO EM GRADE ---
+st.subheader("📊 Histórico Visual (linhas de 9)")
+linhas = [list(historico)[i:i + 9] for i in range(0, len(historico), 9)]
+for linha in linhas:
+    st.markdown(" ".join(f"[{x}]" for x in linha))
 
-# FUNÃ‡Ã•ES DE ANÃ LISE
-def traduz(símbolo):
+# --- FUNÇÕES ---
+def traduz(simbolo):
     return {"C": "Casa", "V": "Visitante", "E": "Empate"}.get(simbolo, simbolo)
 
 def detectar_padroes_complexos(hist):
     padroes = []
-    se len(hist) < 4:
-        retorno padroes
+    if len(hist) < 4:
+        return padroes
     texto = "".join(hist)
-    verificações = {
-        "2x2": "CCVV" em texto ou "VVCC" em texto,
-        "3x3": "CCCVVV" no texto ou "VVVCCC" no texto,
-        "3x1x3": qualquer(texto[i:i+7] == a*3 + b + a*3 para i no intervalo(len(texto)-6) para a em "CV" para b em "VE" se b != a),
-        "2x1x2": qualquer(texto[i:i+5] == a*2 + b + a*2 para i no intervalo(len(texto)-4) para a em "CV" para b em "VE" se b != a),
-        "4x4": "CCCCVVVV" no texto ou "VVVVCCCC" no texto,
-        "3x1x1x2": qualquer(texto[i:i+7] == a*3 + b + b + a*2 para i no intervalo(len(texto)-6) para a em "CV" para b em "VE" se b != a),
+    checks = {
+        "2x2": "CCVV" in texto or "VVCC" in texto,
+        "3x3": "CCCVVV" in texto or "VVVCCC" in texto,
+        "3x1x3": any(texto[i:i+7] == a*3 + b + a*3 for i in range(len(texto)-6) for a in "CV" for b in "VE" if b != a),
+        "2x1x2": any(texto[i:i+5] == a*2 + b + a*2 for i in range(len(texto)-4) for a in "CV" for b in "VE" if b != a),
+        "4x4": "CCCCVVVV" in texto or "VVVVCCCC" in texto,
+        "3x1x1x2": any(texto[i:i+7] == a*3 + b + b + a*2 for i in range(len(texto)-6) for a in "CV" for b in "VE" if b != a),
     }
-    para nome, cond em checks.items():
-        se condição:
+    for nome, cond in checks.items():
+        if cond:
             padroes.append(nome)
-    retorno padroes
+    return padroes
 
 def detectar_padroes_repetidos(hist, janela=5):
-    se len(hist) < janela * 2:
-        retornar Nenhum, 0
-    sequências = [tupla(hist[i:i+janela]) for i in range(len(hist) - janela + 1)]
-    contagem = Contador(sequências)
-    padrões_repetidos = [seq para seq, contar em contagem.items() se contagem > 1]
-    sugestões = []
-    para padrao em padroes_repetidos:
-        para i em intervalo(len(hist) - janela):
-            se tupla(hist[i:i+janela]) == padrao e i+janela < len(hist):
-                sugestões.append(hist[i+janela])
-    se sugere:
-        mais_comum, freq = Contador(sugestões).most_common(1)[0]
-        return f"ðŸ” Padrão recorrente: {''.join(padroes_repetidos[0])} â†' Entrada: {traduz(mais_comum)} (Confiabilidade: {freq})", freq
-    retornar Nenhum, 0
+    if len(hist) < janela * 2:
+        return None, 0
+    sequencias = [tuple(hist[i:i+janela]) for i in range(len(hist) - janela + 1)]
+    contagem = Counter(sequencias)
+    padroes_repetidos = [seq for seq, count in contagem.items() if count > 1]
+    sugestoes = []
+    for padrao in padroes_repetidos:
+        for i in range(len(hist) - janela):
+            if tuple(hist[i:i+janela]) == padrao and i+janela < len(hist):
+                sugestoes.append(hist[i+janela])
+    if sugestoes:
+        mais_comum, freq = Counter(sugestoes).most_common(1)[0]
+        return f"🔁 Padrão: {''.join(padroes_repetidos[0])} → Entrar: {traduz(mais_comum)} (Confiança: {freq})", freq
+    return None, 0
 
 def chance_empate(hist):
     total = len(hist)
     empates = hist.count("E")
-    retornar f"{round((empates/total)*100, 1)}%" se total > 0 senão "0%"
+    return f"{round((empates / total) * 100, 1)}%" if total > 0 else "0%"
 
 def detectar_tendencia_surf(hist):
-    se len(hist) < 2:
-        retornar "-"
+    if len(hist) < 5:
+        return "-"
     atual = hist[-1]
-    contagem = 1
-    para i no intervalo(len(hist)-2, -1, -1):
-        se hist[i] == atual:
-            contagem += 1
-        outro:
-            quebrar
-    se contagem >= 3:
-        quebra = round((1 - (contagem/10)) * 100)
-        return f"âš ï¸ {traduz(atual)} em sequência ({count}x) ➾ Chance de quebra: {quebra}%"
-    retornar "-"
+    count = 1
+    for i in range(len(hist) - 2, -1, -1):
+        if hist[i] == atual:
+            count += 1
+        else:
+            break
+    if count >= 4:
+        quebra = round((1 - (count / 10)) * 100)
+        return f"⚠️ {traduz(atual)} em sequência ({count}x) ➤ Risco de quebra: {quebra}%"
+    return "-"
 
 def recomendacao(hist):
-    se len(hist) == 0:
-        return "Aguardando os primeiros resultados..."
-    se len(hist) < 3:
-        return f"Primeiros dados: Último resultado foi {traduz(hist[-1])}."
-    ultimos = lista(hist)[-3:]
-    se ultimos.count("C") == 3:
-        return "ðŸ“‰ Casa em sequência. Sugestão: Visitante ou Empate."
-    se ultimos.count("V") == 3:
-        return "ðŸ“‰ Visitante em sequência. Sugestão: Casa ou Empate."
-    if últimos[-1] != últimos[-2]:
-        return "†”ï¸ Zig-zag ativo. Seguir alternância."
-    return "ðŸ” Aguardar padrão mais claro."
+    if len(hist) < 3:
+        return "Poucos dados para análise."
+    ultimos = list(hist)[-3:]
+    if ultimos.count("C") == 3:
+        return "📉 Casa em 3x. Sugestão: Visitante ou Empate."
+    if ultimos.count("V") == 3:
+        return "📉 Visitante em 3x. Sugestão: Casa ou Empate."
+    if ultimos[-1] != ultimos[-2]:
+        return "↔️ Zig-zag ativo. Alternância possível."
+    return "🔍 Aguardando novo padrão."
 
-# ANÃ LISE COMPLETA
-st.subheader("ðŸ“ˆ Análise Inteligente")
+# --- ANÁLISE COMPLETA ---
+st.subheader("📈 Análise Inteligente")
 
-padroes = detectar_padroes_complexos(histórico)
-se padroes:
-    st.success("ðŸ”Ž Padrões detectados: " + ", ".join(padroes))
-outro:
-    st.info("Nenhum padrão complexo identificado.")
+padroes = detectar_padroes_complexos(historico)
+if padroes:
+    st.success("🔎 Padrões encontrados: " + ", ".join(padroes))
+else:
+    st.info("Nenhum padrão complexo por enquanto.")
 
-sugestao_pelo_retorno, confianca = detectar_padroes_repetidos(histórico)
-se sugestao_pelo_retorno:
-    se confianca >= 3:
-        st.warning(sugestao_pelo_retorno)
-    outro:
-        st.info(sugestao_pelo_retorno)
+sugestao, confianca = detectar_padroes_repetidos(historico)
+if sugestao:
+    if confianca >= 3:
+        st.warning(sugestao)
+    else:
+        st.info(sugestao)
 
-surf_status = detectar_tendencia_surf(histórico)
-se surf_status != "-":
-    st.warning(status_de_surf)
+surf = detectar_tendencia_surf(historico)
+if surf != "-":
+    st.warning(surf)
 
-st.markdown(f"ðŸ”„ Chance de empate: {chance_empate(historico)}")
-st.markdown(f"ðŸ§ Recomendação com base nos últimos resultados: {recomendacao(historico)}")
+st.markdown(f"🔄 Chance de empate: **{chance_empate(historico)}**")
+st.markdown(f"🧠 Sugestão com base no histórico: **{recomendacao(historico)}**")
 
-# SALVAR HISTÓRICO
-st.session_state["histórico"] = histórico
+# --- SALVA ---
+st.session_state["historico"] = historico
