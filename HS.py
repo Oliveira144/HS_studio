@@ -1,4 +1,4 @@
-# Football Studio HS - Análise completa de padrões avançados
+
 import streamlit as st
 
 # Configuração da página
@@ -143,18 +143,12 @@ if st.button("🧹 Zerar histórico"):
     st.session_state.history.clear()
     st.experimental_rerun()
 
-# Exibe histórico no final, em linha de 9
+# Exibe histórico no final, em linha de 9 (horizontal)
 st.markdown("### 📜 Histórico de Resultados")
 if st.session_state.history:
-    linhas = [st.session_state.history[i:i + RESULTADOS_POR_LINHA]
-              for i in range(0, len(st.session_state.history), RESULTADOS_POR_LINHA)]
+    emojizados = [emoji_map[res] for res in st.session_state.history]
+    linhas = [emojizados[i:i + RESULTADOS_POR_LINHA] for i in range(0, len(emojizados), RESULTADOS_POR_LINHA)]
     for linha in linhas:
-        cols = st.columns(len(linha))
-        for i, res in enumerate(linha):
-            with cols[i]:
-                st.markdown(
-                    f"<div style='text-align:center; font-size:26px; color:{color_map[res]}'>{emoji_map[res]}</div>",
-                    unsafe_allow_html=True
-                )
+        st.markdown(" ".join(linha), unsafe_allow_html=True)
 else:
     st.info("Nenhum resultado inserido.")
