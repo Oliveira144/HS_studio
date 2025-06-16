@@ -102,8 +102,8 @@ if 'last_empate_possibilities' not in st.session_state:
 
 
 # --- Funções de Detecção de Padrões ---
-# As 13 funções devem estar COMPLETAS aqui. Estou usando placeholders para brevidade.
-# Por favor, certifique-se de que cada função está definida corretamente com 'def nome_da_funcao(seq):' e um 'return' válido.
+# As 13 funções devem estar COMPLETAS aqui.
+# Certifique-se de que cada função está definida corretamente com 'def nome_da_funcao(seq):' e um 'return' válido.
 
 def detectar_sequencia_surf(seq):
     """1. Sequência (Surf de Cor) – 3+ vezes a mesma cor seguida"""
@@ -279,6 +279,7 @@ def gerar_sugestoes(sequence_list, resultados_encontrados):
             sugestoes.append(f"**Atenção:** 'Quebra de Surf' recente. O último foi '{ultima_ocorrencia}'.")
 
     if resultados_encontrados.get("4. Quebra de Zig-Zag"):
+        # Adicionei uma condição mais robusta para a sugestão de quebra de Zig-Zag
         if ultima_ocorrencia and len(sequence_list) >= 4 and \
            ( (sequence_list[-4] == sequence_list[-2] and sequence_list[-3] != sequence_list[-4] and sequence_list[-3] == ultima_ocorrencia and sequence_list[-1] != sequence_list[-3]) or \
              (sequence_list[-4] != sequence_list[-3] and sequence_list[-3] == sequence_list[-1] and sequence_list[-2] != sequence_list[-3] and ultima_ocorrencia != sequence_list[-2]) ):
@@ -388,9 +389,15 @@ with col_input_seq:
     if st.session_state.current_sequence:
         current_seq_str = "".join(st.session_state.current_sequence)
         formatted_current_seq = ""
-        for j in range(0, len(current_seq_str), 9):
-            formatted_current_seq += current_seq_str[j:j+9] + " "
-        st.code(f"**{formatted_current_seq.strip()}**")
+        # Adiciona quebras de linha para melhor visualização de sequências longas
+        for j in range(0, len(current_seq_str), 20): # Agrupa 20 caracteres por linha
+            formatted_current_seq += current_seq_str[j:j+20] + "\n"
+        st.code(f"Sequência: **{formatted_current_seq.strip()}**")
+
+        # --- DEBUG: Mostrar a sequência que está sendo analisada ---
+        st.info(f"**DEBUG:** A sequência sendo analisada (do mais antigo ao mais recente) é: `{current_seq_str}`")
+        # st.info(f"**DEBUG:** Últimos 5 elementos: `{current_seq_str[-5:]}`") # Exemplo para verificar o final da sequência
+        # --- FIM DEBUG ---
     else:
         st.info("Nenhum resultado adicionado ainda.")
 
