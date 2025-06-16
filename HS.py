@@ -3,6 +3,62 @@ from collections import Counter
 
 st.set_page_config(page_title="Analisador de Padrões e Sugestões", layout="wide", initial_sidebar_state="expanded")
 
+# --- Injeção de CSS para Botões Coloridos (Estilo Football Studio Live) ---
+st.markdown("""
+<style>
+/* Estilo para o botão Casa (Vermelho) */
+div.stButton > button:nth-child(1) {
+    background-color: #FF4B4B; /* Vermelho vibrante */
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 1.2em;
+    font-weight: bold;
+    border-radius: 5px;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+}
+/* Estilo para o botão Visitante (Azul) */
+div.stButton > button:nth-child(2) {
+    background-color: #4B4BFF; /* Azul vibrante */
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 1.2em;
+    font-weight: bold;
+    border-radius: 5px;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+}
+/* Estilo para o botão Empate (Cinza) */
+div.stButton > button:nth-child(3) {
+    background-color: #808080; /* Cinza médio */
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 1.2em;
+    font-weight: bold;
+    border-radius: 5px;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+}
+/* Estilo para os botões de ação (Limpar/Analisar/Zerar) para diferenciá-los */
+div.stButton > button:not(:nth-child(1)):not(:nth-child(2)):not(:nth-child(3)) {
+    background-color: #333333; /* Cinza escuro para botões de ação */
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 1em;
+    font-weight: bold;
+    border-radius: 5px;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+}
+/* Estilo para o botão "Analisar Sequência" principal */
+button[data-testid="stFormSubmitButton"] {
+    background-color: #FF4B4B; /* Cor primária Streamlit, pode ser ajustada */
+    color: white;
+}
+</style>
+""", unsafe_allow_html=True)
+
+
 # --- Inicialização do Session State ---
 if 'current_sequence' not in st.session_state:
     st.session_state.current_sequence = []
@@ -107,12 +163,12 @@ def detectar_padrao_escada(seq):
         return padroes_encontrados
 
     for i in range(len(seq) - 5):
-        if (seq[i] != seq[i+1] and
-            seq[i+1] == seq[i+2] and seq[i+1] != seq[i] and
-            seq[i+3] == seq[i+4] == seq[i+5] and seq[i+3] == seq[i]
+        if (seq[i] != seq[i+1] and # 1 elemento do primeiro tipo
+            seq[i+1] == seq[i+2] and seq[i+1] != seq[i] and # 2 elementos do segundo tipo
+            seq[i+3] == seq[i+4] == seq[i+5] and seq[i+3] == seq[i] # 3 elementos do primeiro tipo
         ):
             padroes_encontrados.append(f"Padrão Escada (1-{seq[i]}, 2-{seq[i+1]}, 3-{seq[i]}) detectado iniciando na posição {i+1}.")
-    return padroes_encontrado
+    return padroes_encontrados
 
 def detectar_espelho(seq):
     """8. Espelho – Ex: Casa, Visitante, Visitante, Casa"""
@@ -208,60 +264,87 @@ def gerar_sugestoes(sequence_list, resultados_encontrados):
 
     if resultados_encontrados.get("2. Zig-Zag"):
         for res in resultados_encontrados["2. Zig-Zag"]:
-            if ultima_ocorrencia and penultima_ocorrencia and f"{penultima_ocorrencia},{ultima_ocorrencia}" in res:
+            # Verifica se o padrão de zig-zag está no final da sequência para sugerir a próxima alternância
+            if ultima_ocorrencia and penultima_ocorrencia and \
+               len(sequence_list) >= 4 and \
+               sequence_list[-4] == penultima_ocorrencia and \
+               sequence_list[-3] == ultima_ocorrencia: # A,B,A,B
                 sugestoes.append(f"**Sugestão:** Continuar o 'Zig-Zag' com **'{penultima_ocorrencia}'**.")
 
     if resultados_encontrados.get("3. Quebra de Surf"):
-        if ultima_ocorrencia and penultima_ocorrencia and st.session_state.current_sequence.count(penultima_ocorrencia) >= 3 and ultima_ocorrencia != penultima_ocorrencia:
-            sugestoes.append(f"**Atenção:** 'Quebra de Surf' recente. Próximo pode **não** ser '{ultima_ocorrencia}'.")
+        if ultima_ocorrencia and len(sequence_list) >= 4 and \
+           sequence_list[-4] == sequence_list[-3] == sequence_list[-2] and \
+           ultima_ocorrencia != sequence_list[-4]:
+            sugestoes.append(f"**Atenção:** 'Quebra de Surf' recente. O último foi '{ultima_ocorrencia}'.")
 
     if resultados_encontrados.get("4. Quebra de Zig-Zag"):
         sugestoes.append(f"**Atenção:** 'Quebra de Zig-Zag' recente. Próximo pode não seguir a alternância original.")
 
     if resultados_encontrados.get("5. Duplas repetidas"):
-        sugestoes.append(f"**Considerar:** Padrão de 'Duplas Repetidas'. Pode haver uma nova dupla ou quebra de padrão.")
+        if ultima_ocorrencia and penultima_ocorrencia and \
+           len(sequence_list) >= 4 and \
+           sequence_list[-4] == sequence_list[-3] and \
+           penultima_ocorrencia == ultima_ocorrencia and \
+           sequence_list[-4] != ultima_ocorrencia:
+            sugestoes.append(f"**Considerar:** Padrão de 'Duplas Repetidas' (Ex: AABB). Pode haver uma nova dupla ou quebra de padrão.")
 
     if resultados_encontrados.get("6. Empate recorrente"):
         possibilidades_empate.append("**Alta Possibilidade:** 'Empate' devido à recorrência.")
         sugestoes.append("Considerar 'Empate' devido à recorrência.")
 
     if resultados_encontrados.get("8. Espelho"):
-        sugestoes.append(f"**Sugestão:** Padrão 'Espelho' detectado. Próximo pode seguir o inverso ou repetir o início.")
+        if ultima_ocorrencia and len(sequence_list) >= 4 and \
+           sequence_list[-4] == ultima_ocorrencia and \
+           sequence_list[-3] == penultima_ocorrencia: # Ex: A B B A
+            sugestoes.append(f"**Sugestão:** Padrão 'Espelho' detectado. Próximo pode inverter ou ser similar ao início ('{penultima_ocorrencia}').")
 
     if resultados_encontrados.get("9. Alternância com empate no meio"):
-        possibilidades_empate.append(f"**Possibilidade:** 'Empate' como meio de alternância. (Ex: C, E, V)")
-        sugestoes.append("Considerar 'Empate' devido à alternância com empate no meio.")
+        if ultima_ocorrencia and penultima_ocorrencia and len(sequence_list) >= 3 and \
+           sequence_list[-2] == 'E' and ultima_ocorrencia != 'E' and sequence_list[-3] != 'E' and \
+           sequence_list[-3] != ultima_ocorrencia: # X, E, Y
+            possibilidades_empate.append(f"**Possibilidade:** 'Empate' como meio de alternância. (Ex: {sequence_list[-3]}, E, {ultima_ocorrencia})")
+            sugestoes.append("Considerar 'Empate' devido à alternância com empate no meio.")
 
     if resultados_encontrados.get("10. Padrão 'onda'"):
-        if ultima_ocorrencia and penultima_ocorrencia and ultima_ocorrencia != penultima_ocorrencia:
+        if ultima_ocorrencia and penultima_ocorrencia and \
+           len(sequence_list) >= 4 and \
+           sequence_list[-4] == penultima_ocorrencia and \
+           sequence_list[-3] == ultima_ocorrencia: # 1,2,1,2
             sugestoes.append(f"**Sugestão:** Continuar o 'Padrão Onda' com **'{penultima_ocorrencia}'**.")
 
     if resultados_encontrados.get("12. Padrão 3x1"):
-        if ultima_ocorrencia and len(sequence_list) >= 4 and sequence_list[-4] == sequence_list[-3] == sequence_list[-2] and sequence_list[-1] != sequence_list[-4]:
-            sugestoes.append(f"**Atenção:** Padrão 3x1 detectado. Próximo pode continuar o '{ultima_ocorrencia}' ou iniciar nova sequência.")
+        if ultima_ocorrencia and len(sequence_list) >= 4 and \
+           sequence_list[-4] == sequence_list[-3] == sequence_list[-2] and \
+           sequence_list[-1] != sequence_list[-4]:
+            sugestoes.append(f"**Atenção:** Padrão 3x1 detectado ('{sequence_list[-4]}' 3x, '{ultima_ocorrencia}' 1x). Pode indicar mudança ou continuação da última.")
 
     if resultados_encontrados.get("13. Padrão 3x3"):
-        if ultima_ocorrencia and len(sequence_list) >= 6 and sequence_list[-6] == sequence_list[-5] == sequence_list[-4] and sequence_list[-3] == sequence_list[-2] == sequence_list[-1] and sequence_list[-6] != sequence_list[-3]:
-            sugestoes.append(f"**Atenção:** Padrão 3x3 detectado. Fim de um ciclo, pode iniciar nova sequência.")
+        if ultima_ocorrencia and len(sequence_list) >= 6 and \
+           sequence_list[-6] == sequence_list[-5] == sequence_list[-4] and \
+           sequence_list[-3] == sequence_list[-2] == sequence_list[-1] and \
+           sequence_list[-6] != sequence_list[-3]:
+            sugestoes.append(f"**Atenção:** Padrão 3x3 detectado. Fim de um ciclo (3x '{sequence_list[-6]}', 3x '{sequence_list[-3]}'). Pode iniciar nova tendência.")
 
 
-    # Sugestões gerais sobre Empate (mesma lógica anterior, mas agora como sugestão explícita)
+    # Sugestões gerais sobre Empate
     empate_count = sequence_list.count('E')
-    if sequence_list:
-        if empate_count > len(sequence_list) / 3 and len(sequence_list) > 3: # Mais de 33% de empates e sequência razoável
-            possibilidades_empate.append("A alta frequência de empates sugere maior probabilidade de novo 'Empate'.")
-        elif empate_count == 0 and len(sequence_list) > 5:
-            possibilidades_empate.append("Ausência prolongada de empates pode indicar um 'Empate' em breve (lei das médias).")
-        # Analisar se o último foi não-empate e o penúltimo foi empate (ex: V,E) pode sugerir não-empate
-        if len(sequence_list) >= 2 and ultima_ocorrencia != 'E' and penultima_ocorrencia == 'E':
-            sugestoes.append(f"Pós-Empate: O último resultado foi '{ultima_ocorrencia}'.")
+    total_results = len(sequence_list)
+    if total_results > 0:
+        freq_empate = empate_count / total_results
+        if freq_empate > 0.33 and total_results > 3:
+            possibilidades_empate.append("A alta frequência de empates na sequência atual sugere maior probabilidade de novo 'Empate'.")
+        elif empate_count == 0 and total_results > 5:
+            possibilidades_empate.append("Ausência prolongada de empates pode indicar um 'Empate' em breve (lei das médias/compensação).")
+        # Pós-Empate: O que geralmente acontece depois de um empate? (Exemplo de regra)
+        if total_results >= 2 and ultima_ocorrencia != 'E' and penultima_ocorrencia == 'E':
+            sugestoes.append(f"**Análise Pós-Empate:** O último resultado foi '{ultima_ocorrencia}' após um empate.")
 
 
     return sugestoes, possibilidades_empate
 
 # --- Título e Descrição da Aplicação ---
 st.header("Análise de Padrões em Sequências de Resultados")
-st.markdown("Utilize os botões abaixo para inserir os resultados (Casa, Visitante, Empate) e analisar os padrões.")
+st.markdown("Utilize os botões abaixo para inserir os resultados (Casa, Visitante, Empate) e a análise será **automática**.")
 
 # --- Layout Dinâmico ---
 # Colunas para entrada de dados e visualização da sequência
@@ -273,108 +356,112 @@ with col1:
 
     btn_col1, btn_col2, btn_col3 = st.columns(3)
     with btn_col1:
-        if st.button("Casa (C)", use_container_width=True):
+        if st.button("Casa (C)", use_container_width=True, key="btn_casa"):
             st.session_state.current_sequence.append('C')
+            # Força o rerun para que a análise automática seja disparada
+            st.rerun()
     with btn_col2:
-        if st.button("Visitante (V)", use_container_width=True):
+        if st.button("Visitante (V)", use_container_width=True, key="btn_visitante"):
             st.session_state.current_sequence.append('V')
+            st.rerun()
     with btn_col3:
-        if st.button("Empate (E)", use_container_width=True):
+        if st.button("Empate (E)", use_container_width=True, key="btn_empate"):
             st.session_state.current_sequence.append('E')
+            st.rerun()
 
     st.markdown("---")
-    st.subheader("Ações")
-    if st.button("🔄 Limpar Sequência Atual", use_container_width=True):
+    st.subheader("Ações da Sequência")
+    if st.button("↩️ Desfazer Último", use_container_width=True, key="btn_undo"):
+        if st.session_state.current_sequence:
+            st.session_state.current_sequence.pop()
+            st.success("Último resultado desfeito!")
+            st.rerun()
+        else:
+            st.warning("Sequência vazia. Nada para desfazer.")
+    if st.button("🔄 Limpar Sequência Atual", use_container_width=True, key="btn_clear_current"):
         st.session_state.current_sequence = []
         st.success("Sequência atual limpa!")
-    if st.button("✅ Analisar Sequência", type="primary", use_container_width=True):
-        pass # A lógica de análise será executada após este bloco
+        st.rerun() # Recarrega a página para refletir a limpeza imediatamente
 
 
 with col2:
     st.subheader("📊 Sequência Atual")
     if st.session_state.current_sequence:
-        # Exibe a sequência atual em blocos de 9
         current_seq_str = "".join(st.session_state.current_sequence)
         formatted_current_seq = ""
+        # Formata a entrada em blocos de 9, separados por espaço
         for j in range(0, len(current_seq_str), 9):
-            formatted_current_seq += current_seq_str[j:j+9] + " " # Adiciona espaço entre blocos
-        st.code(f"{formatted_current_seq.strip()}")
+            formatted_current_seq += current_seq_str[j:j+9] + " "
+        st.code(f"**{formatted_current_seq.strip()}**") # Negrito para destaque
     else:
         st.info("Nenhum resultado adicionado ainda.")
 
-# --- Executar Análise e Exibir Resultados (Após os botões de ação) ---
-if st.button("✅ Analisar Sequência", type="primary", key="analyze_button_bottom", use_container_width=True):
-    if not st.session_state.current_sequence:
-        st.warning("Por favor, adicione resultados à sequência para analisar.")
-    else:
-        # Adiciona a sequência atual ao histórico
-        st.session_state.history.append("".join(st.session_state.current_sequence))
+# --- Executar Análise Automaticamente ---
+# A análise agora é sempre executada quando a página é rerunnada (após clique nos botões de resultado ou ações)
+if st.session_state.current_sequence: # Só analisa se há algo na sequência
+    st.subheader("🔍 Resultados da Análise")
+    st.write(f"Sequência analisada: **{', '.join(st.session_state.current_sequence)}**")
+    st.markdown("---")
 
-        st.subheader("🔍 Resultados da Análise")
-        st.write(f"Sequência analisada: **{', '.join(st.session_state.current_sequence)}**")
+    resultados_encontrados = {}
+    resultados_encontrados["1. Sequência (Surf de Cor)"] = detectar_sequencia_surf(st.session_state.current_sequence)
+    resultados_encontrados["2. Zig-Zag"] = detectar_zig_zag(st.session_state.current_sequence)
+    resultados_encontrados["3. Quebra de Surf"] = detectar_quebra_surf(st.session_state.current_sequence)
+    resultados_encontrados["4. Quebra de Zig-Zag"] = detectar_quebra_zig_zag(st.session_state.current_sequence)
+    resultados_encontrados["5. Duplas repetidas"] = detectar_duplas_repetidas(st.session_state.current_sequence)
+    resultados_encontrados["6. Empate recorrente"] = detectar_empate_recorrente(st.session_state.current_sequence)
+    resultados_encontrados["7. Padrão Escada"] = detectar_padrao_escada(st.session_state.current_sequence)
+    resultados_encontrados["8. Espelho"] = detectar_espelho(st.session_state.current_sequence)
+    resultados_encontrados["9. Alternância com empate no meio"] = detectar_alternancia_empate_meio(st.session_state.current_sequence)
+    resultados_encontrados["10. Padrão 'onda'"] = detectar_padrao_onda(st.session_state.current_sequence)
+    resultados_encontrados["11. Padrões de Previsão Tática"] = analisar_previsao_tatica(st.session_state.current_sequence)
+    resultados_encontrados["12. Padrão 3x1"] = detectar_padrao_3x1(st.session_state.current_sequence)
+    resultados_encontrados["13. Padrão 3x3"] = detectar_padrao_3x3(st.session_state.current_sequence)
+
+    col_patterns, col_suggestions = st.columns(2)
+
+    with col_patterns:
+        st.subheader("📈 Padrões Detectados")
+        algum_padrao_detectado = False
+        for padrao, resultados in resultados_encontrados.items():
+            if resultados:
+                st.success(f"✔️ **{padrao}:**")
+                for res in resultados:
+                    st.write(f"- {res}")
+                algum_padrao_detectado = True
+        if not algum_padrao_detectado:
+            st.info("Nenhum dos padrões definidos foi detectado na sequência fornecida.")
+
+    with col_suggestions:
+        st.subheader("🎯 Sugestões de Entradas")
+        sugestoes, possibilidades_empate = gerar_sugestoes(st.session_state.current_sequence, resultados_encontrados)
+
+        if sugestoes:
+            st.markdown("**Considerando os padrões e tendências:**")
+            for s in sugestoes:
+                st.info(f"- {s}")
+        else:
+            st.info("Não há sugestões claras de entradas com base nos padrões detectados nesta sequência.")
+
         st.markdown("---")
+        st.subheader("🤝 Possibilidade de Empate")
+        if possibilidades_empate:
+            st.markdown("**Fatores que indicam possibilidade de empate:**")
+            for pe in possibilidades_empate:
+                st.warning(f"- {pe}")
+        else:
+            st.info("Nenhuma tendência forte para 'Empate' detectada nesta sequência.")
+    
+    st.markdown("---")
 
-        resultados_encontrados = {}
-        resultados_encontrados["1. Sequência (Surf de Cor)"] = detectar_sequencia_surf(st.session_state.current_sequence)
-        resultados_encontrados["2. Zig-Zag"] = detectar_zig_zag(st.session_state.current_sequence)
-        resultados_encontrados["3. Quebra de Surf"] = detectar_quebra_surf(st.session_state.current_sequence)
-        resultados_encontrados["4. Quebra de Zig-Zag"] = detectar_quebra_zig_zag(st.session_state.current_sequence)
-        resultados_encontrados["5. Duplas repetidas"] = detectar_duplas_repetidas(st.session_state.current_sequence)
-        resultados_encontrados["6. Empate recorrente"] = detectar_empate_recorrente(st.session_state.current_sequence)
-        resultados_encontrados["7. Padrão Escada"] = detectar_padrao_escada(st.session_state.current_sequence)
-        resultados_encontrados["8. Espelho"] = detectar_espelho(st.session_state.current_sequence)
-        resultados_encontrados["9. Alternância com empate no meio"] = detectar_alternancia_empate_meio(st.session_state.current_sequence)
-        resultados_encontrados["10. Padrão 'onda'"] = detectar_padrao_onda(st.session_state.current_sequence)
-        resultados_encontrados["11. Padrões de Previsão Tática"] = analisar_previsao_tatica(st.session_state.current_sequence)
-        resultados_encontrados["12. Padrão 3x1"] = detectar_padrao_3x1(st.session_state.current_sequence)
-        resultados_encontrados["13. Padrão 3x3"] = detectar_padrao_3x3(st.session_state.current_sequence)
-
-        col_patterns, col_suggestions = st.columns(2)
-
-        with col_patterns:
-            st.subheader("📈 Padrões Detectados")
-            algum_padrao_detectado = False
-            for padrao, resultados in resultados_encontrados.items():
-                if resultados:
-                    st.success(f"✔️ **{padrao}:**")
-                    for res in resultados:
-                        st.write(f"- {res}")
-                    algum_padrao_detectado = True
-            if not algum_padrao_detectado:
-                st.info("Nenhum dos padrões definidos foi detectado na sequência fornecida.")
-
-        with col_suggestions:
-            st.subheader("🎯 Sugestões de Entradas")
-            sugestoes, possibilidades_empate = gerar_sugestoes(st.session_state.current_sequence, resultados_encontrados)
-
-            if sugestoes:
-                st.markdown("**Considerando os padrões e tendências:**")
-                for s in sugestoes:
-                    st.info(f"- {s}")
-            else:
-                st.info("Não há sugestões claras de entradas com base nos padrões detectados nesta sequência.")
-
-            st.markdown("---")
-            st.subheader("🤝 Possibilidade de Empate")
-            if possibilidades_empate:
-                st.markdown("**Fatores que indicam possibilidade de empate:**")
-                for pe in possibilidades_empate:
-                    st.warning(f"- {pe}")
-            else:
-                st.info("Nenhuma tendência forte para 'Empate' detectada nesta sequência.")
-        
-        st.markdown("---")
-
-
-st.markdown("---")
+# --- Histórico de Análises ---
 st.subheader("📚 Histórico de Análises")
 
 # Botão para zerar o histórico
-if st.button("🧹 Zerar Histórico", use_container_width=True):
+if st.button("🧹 Zerar Histórico", use_container_width=True, key="btn_clear_history"):
     st.session_state.history = []
     st.success("Histórico zerado!")
-    st.rerun() # Recarrega a página para refletir a limpeza imediatamente
+    st.rerun()
 
 if st.session_state.history:
     for i, entry in enumerate(st.session_state.history):
