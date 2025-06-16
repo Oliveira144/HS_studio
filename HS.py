@@ -1,20 +1,20 @@
+# Football Studio HS - Analisador com TODOS os padrões avançados do jogo
+
 import streamlit as st
 from collections import deque
 
+# Configuração inicial
 st.set_page_config(page_title="Football Studio HS", layout="centered")
-
-# ----------------------
-# VARIÁVEIS GLOBAIS
-# ----------------------
 MAX_HISTORY = 50
 history = deque([], maxlen=MAX_HISTORY)
 
-# ----------------------
-# FUNÇÕES DE PADRÕES
-# ----------------------
+# Mapas de cor e ícones
+color_map = {"Casa": "red", "Visitante": "blue", "Empate": "orange"}
+emoji_map = {"Casa": "🔴", "Visitante": "🔵", "Empate": "🟡"}
+
+# Funções de detecção de padrões
 def detectar_sequencia(hist):
-    if len(hist) < 3:
-        return None
+    if len(hist) < 3: return None
     ultima = hist[-1]
     count = 1
     for i in range(len(hist) - 2, -1, -1):
@@ -23,107 +23,121 @@ def detectar_sequencia(hist):
         else:
             break
     if count >= 3:
-        return f"Sequência de {count}x {ultima}"
+        return f"Sequência de {count}x {ultima}. Sugestão: seguir a mesma cor."
     return None
 
 def detectar_zigzag(hist):
-    if len(hist) < 5:
-        return None
-    padrao = list(hist)[-5:]
-    if all(padrao[i] != padrao[i+1] for i in range(4)):
-        return "Padrão de Zig-Zag detectado"
+    if len(hist) < 6: return None
+    padrao = list(hist)[-6:]
+    if all(padrao[i] != padrao[i+1] for i in range(5)):
+        return "Zig-zag detectado. Sugestão: seguir alternância."
     return None
 
 def detectar_surf(hist):
-    if len(hist) < 6:
-        return None
-    surf_color = hist[-1]
-    sequencia = 1
-    for i in range(len(hist)-2, -1, -1):
-        if hist[i] == surf_color:
-            sequencia += 1
-        elif i > 0 and hist[i-1] == surf_color:
-            sequencia += 1
+    if len(hist) < 6: return None
+    cor = hist[-1]
+    seguidos = 1
+    quebras = 0
+    for i in range(len(hist) - 2, -1, -1):
+        if hist[i] == cor:
+            seguidos += 1
+        elif i >= 1 and hist[i-1] == cor:
+            seguidos += 1
+            quebras += 1
             i -= 1
         else:
             break
-    if sequencia >= 4:
-        return f"Surf detectado em '{surf_color}' com {sequencia} acertos"
+    if seguidos >= 4 and quebras <= 2:
+        return f"Surf detectado: {seguidos}x {cor} com {quebras} quebra(s). Sugestão: apostar {cor} nas próximas 3."
     return None
 
-def sugestao_de_entrada(hist):
-    surf = detectar_surf(hist)
-    if surf:
-        cor = hist[-1]
-        return {
-            "sugestao": f"Surf em andamento: aposte em {cor} nas próximas 3 rodadas!",
-            "cor": cor,
-            "entradas": [cor, cor, cor]
-        }
-    seq = detectar_sequencia(hist)
-    if seq:
-        return {
-            "sugestao": f"{seq}. Possível quebra de sequência. Considere aposta oposta.",
-            "cor": "Contrária"
-        }
-    zig = detectar_zigzag(hist)
-    if zig:
-        return {
-            "sugestao": "Zig-Zag detectado. Siga alternância ou espere quebra.",
-            "cor": "Alternada"
-        }
-    return {"sugestao": "Nenhum padrão forte no momento."}
+def detectar_dupla_alternada(hist):
+    if len(hist) < 8: return None
+    padrao = list(hist)[-8:]
+    pares = [padrao[i:i+2] for i in range(0, 8, 2)]
+    if all(par[0] == par[1] for par in pares) and all(pares[i][0] != pares[i+1][0] for i in range(3)):
+        return "Padrão de dupla alternada (ex: HH-AA-HH). Sugestão: siga alternância dupla."
+    return None
 
-# ----------------------
-# INTERFACE STREAMLIT
-# ----------------------
-st.title("🎲 Football Studio HS - Analisador de Padrões")
+def detectar_empate_ciclico(hist):
+    if len(hist) < 10: return None
+    indices = [i for i, x in enumerate(hist) if x == "Empate"]
+    if len(indices) >= 3:
+        diffs = [indices[i+1] - indices[i] for i in range(len(indices)-1)]
+        if all(d == diffs[0] for d in diffs):
+            return f"Empate cíclico a cada {diffs[0]} jogadas. Sugestão: esperar empate na próxima {diffs[0]} rodada."
+    return None
 
-st.markdown("Últimos resultados:")
+def detectar_quebra_sequencia_com_recuperacao(hist):
+    if len(hist) < 7: return None
+    ultima = hist[-1]
+    anterior = hist[-2]
+    if ultima == hist[-3] == hist[-4] and anterior != ultima:
+        return f"Sequência com quebra recuperada: {ultima}. Sugestão: seguir o fluxo {ultima}."
+    return None
+
+def detectar_cascata_empate(hist):
+    if len(hist) < 6: return None
+    padrao = list(hist)[-6:]
+    if padrao.count("Empate") >= 3:
+        return "Cascata de empates detectada. Sugestão: evitar apostas até estabilizar."
+    return None
+
+def detectar_sequencia_com_empate_no_meio(hist):
+    if len(hist) < 5: return None
+    if hist[-1] == hist[-3] and hist[-2] == "Empate":
+        return f"Sequência com empate no meio detectada. Sugestão: seguir cor {hist[-1]}."
+    return None
+
+def analisar_todos_os_padroes(hist):
+    funcoes = [
+        detectar_surf,
+        detectar_sequencia,
+        detectar_zigzag,
+        detectar_dupla_alternada,
+        detectar_empate_ciclico,
+        detectar_quebra_sequencia_com_recuperacao,
+        detectar_cascata_empate,
+        detectar_sequencia_com_empate_no_meio,
+    ]
+    analises = []
+    for func in funcoes:
+        r = func(hist)
+        if r:
+            analises.append(r)
+    return analises
+
+# Interface do app
+st.title("🎲 Football Studio HS - Padrões Avançados")
+
+st.markdown("### Histórico de resultados")
 cols = st.columns(len(history) if history else 1)
 for i, cor in enumerate(history):
     with cols[i]:
-        color_map = {
-            "Casa": "red",
-            "Visitante": "blue",
-            "Empate": "orange"
-        }
-        if st.button("⬤", key=f"{i}", help=f"{cor}", args=(i,), 
-                     use_container_width=True):
-            nova_cor = st.selectbox(f"Corrigir resultado {i+1}:", ["Casa", "Visitante", "Empate"], index=["Casa", "Visitante", "Empate"].index(cor), key=f"edit_{i}")
-            history[i] = nova_cor
-        st.markdown(f"<div style='text-align:center; color:{color_map[cor]}; font-weight:bold'>{cor}</div>", unsafe_allow_html=True)
+        st.markdown(
+            f"<div style='text-align:center; font-size:22px; color:{color_map[cor]}'>{emoji_map[cor]}</div>",
+            unsafe_allow_html=True
+        )
 
-st.divider()
+st.markdown("---")
 
-# Entrada manual
-st.subheader("Inserir novo resultado")
+st.markdown("### Inserir novo resultado")
 col1, col2, col3 = st.columns(3)
-if col1.button("🔴 Casa"):
-    history.append("Casa")
-if col2.button("🔵 Visitante"):
-    history.append("Visitante")
-if col3.button("🟡 Empate"):
-    history.append("Empate")
+if col1.button("🔴 Casa"): history.append("Casa")
+if col2.button("🔵 Visitante"): history.append("Visitante")
+if col3.button("🟡 Empate"): history.append("Empate")
 
-st.divider()
+st.markdown("---")
 
-# Sugestões e Padrões
-st.subheader("🧠 Análise de Padrões")
-analises = [
-    detectar_sequencia(history),
-    detectar_zigzag(history),
-    detectar_surf(history)
-]
-for analise in analises:
-    if analise:
-        st.info(f"🔍 {analise}")
+st.markdown("### Análise de padrões detectados")
+padroes = analisar_todos_os_padroes(history)
+if padroes:
+    for padrao in padroes:
+        st.info(f"{padrao}")
+else:
+    st.warning("Nenhum padrão forte identificado no momento.")
 
-sugestao = sugestao_de_entrada(history)
-st.success(f"💡 Sugestão: {sugestao['sugestao']}")
-
-# Botão de reset
-st.divider()
-if st.button("🔁 Zerar histórico e recomeçar"):
+st.markdown("---")
+if st.button("🔁 Zerar histórico"):
     history.clear()
     st.experimental_rerun()
