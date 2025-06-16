@@ -13,32 +13,25 @@ st.markdown("""
         height: 60px !important;
         font-size: 22px !important;
     }
-    .stButton>button {
-        background-color: #004AAD;
-        color: white;
-        border-radius: 8px;
-    }
 </style>
 """, unsafe_allow_html=True)
 
 # --- HISTÓRICO ---
-if "historico" not in st.session_state:
-    st.session_state["historico"] = deque(maxlen=300)
-historico = st.session_state["historico"]
+historico = st.session_state.get("historico", deque(maxlen=300))
 
 # --- INPUT OTIMIZADO ---
-st.subheader("🎮 Inserir Resultado:")
+st.subheader("🎮 Inserir resultado ao vivo:")
 col1, col2, col3 = st.columns(3)
 if col1.button("🏠 Casa", use_container_width=True):
     historico.append("C")
-if col2.button("🤝 Empate", use_container_width=True):
+elif col2.button("🤝 Empate", use_container_width=True):
     historico.append("E")
-if col3.button("🚩 Visitante", use_container_width=True):
+elif col3.button("🚩 Visitante", use_container_width=True):
     historico.append("V")
 
-# --- HISTÓRICO EM GRADE ---
+# --- HISTÓRICO VISUAL ---
 st.subheader("📊 Histórico Visual (linhas de 9)")
-linhas = [list(historico)[i:i + 9] for i in range(0, len(historico), 9)]
+linhas = [list(historico)[i:i+9] for i in range(0, len(historico), 9)]
 for linha in linhas:
     st.markdown(" ".join(f"[{x}]" for x in linha))
 
@@ -47,6 +40,8 @@ def traduz(simbolo):
     return {"C": "Casa", "V": "Visitante", "E": "Empate"}.get(simbolo, simbolo)
 
 def detectar_padroes_complexos(hist):
+    if isinstance(hist, str):
+        hist = list(hist)
     padroes = []
     if len(hist) < 4:
         return padroes
@@ -65,6 +60,8 @@ def detectar_padroes_complexos(hist):
     return padroes
 
 def detectar_padroes_repetidos(hist, janela=5):
+    if isinstance(hist, str):
+        hist = list(hist)
     if len(hist) < janela * 2:
         return None, 0
     sequencias = [tuple(hist[i:i+janela]) for i in range(len(hist) - janela + 1)]
@@ -97,7 +94,7 @@ def detectar_tendencia_surf(hist):
             break
     if count >= 4:
         quebra = round((1 - (count / 10)) * 100)
-        return f"⚠️ {traduz(atual)} em sequência ({count}x) ➤ Risco de quebra: {quebra}%"
+        return f"⚠️ {traduz(atual)} em sequência ({count}x) ➤ Alta chance de quebra ({quebra}%)"
     return "-"
 
 def recomendacao(hist):
@@ -105,21 +102,21 @@ def recomendacao(hist):
         return "Poucos dados para análise."
     ultimos = list(hist)[-3:]
     if ultimos.count("C") == 3:
-        return "📉 Casa em 3x. Sugestão: Visitante ou Empate."
+        return "📉 Casa em sequência. Sugestão: Visitante ou Empate."
     if ultimos.count("V") == 3:
-        return "📉 Visitante em 3x. Sugestão: Casa ou Empate."
+        return "📉 Visitante em sequência. Sugestão: Casa ou Empate."
     if ultimos[-1] != ultimos[-2]:
-        return "↔️ Zig-zag ativo. Alternância possível."
-    return "🔍 Aguardando novo padrão."
+        return "↔️ Zig-zag ativo. Seguir alternância."
+    return "🔍 Aguardar padrão mais claro."
 
-# --- ANÁLISE COMPLETA ---
+# --- ANÁLISE INTELIGENTE ---
 st.subheader("📈 Análise Inteligente")
 
 padroes = detectar_padroes_complexos(historico)
 if padroes:
     st.success("🔎 Padrões encontrados: " + ", ".join(padroes))
 else:
-    st.info("Nenhum padrão complexo por enquanto.")
+    st.info("Nenhum padrão complexo identificado até agora.")
 
 sugestao, confianca = detectar_padroes_repetidos(historico)
 if sugestao:
@@ -132,8 +129,8 @@ surf = detectar_tendencia_surf(historico)
 if surf != "-":
     st.warning(surf)
 
-st.markdown(f"🔄 Chance de empate: **{chance_empate(historico)}**")
-st.markdown(f"🧠 Sugestão com base no histórico: **{recomendacao(historico)}**")
+st.markdown(f"🔄 **Chance de empate**: {chance_empate(historico)}")
+st.markdown(f"🧠 **Recomendação baseada no histórico**: {recomendacao(historico)}")
 
-# --- SALVA ---
+# --- SALVAR HISTÓRICO ---
 st.session_state["historico"] = historico
