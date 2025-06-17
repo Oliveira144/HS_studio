@@ -30,22 +30,23 @@ st.subheader("🧾 Histórico (últimos resultados em blocos de 9)")
 
 def exibir_historico(cores):
     if not cores:
+def exibir_historico(cores):
+    if not cores:
         st.info("Nenhum resultado inserido ainda.")
         return
 
     blocos = [cores[i:i + 9] for i in range(0, len(cores), 9)]
 
     for bloco in blocos:
-        colunas = st.columns(len(bloco))
-        for i, cor in enumerate(bloco):
-            with colunas[i]:
-                if cor == "C":
-                    st.markdown("<div style='font-size:30px;'>🔴</div>", unsafe_allow_html=True)
-                elif cor == "V":
-                    st.markdown("<div style='font-size:30px;'>🔵</div>", unsafe_allow_html=True)
-                elif cor == "E":
-                    st.markdown("<div style='font-size:30px;'>🟡</div>", unsafe_allow_html=True)
-
+        linha = ""
+        for cor in bloco:
+            if cor == "C":
+                linha += "🔴 "
+            elif cor == "V":
+                linha += "🔵 "
+            elif cor == "E":
+                linha += "🟡 "
+        st.markdown(f"<div style='font-size:30px;'>{linha.strip()}</div>", unsafe_allow_html=True)
 exibir_historico(cores)
 
 # ---------------------- FUNÇÕES DE PADRÕES ----------------------
