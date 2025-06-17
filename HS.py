@@ -4,21 +4,21 @@ Configurações iniciais
 
 st.set_page_config(page_title="Football Inteligente HS", layout="centered") st.title("⚽ Football Inteligente HS")
 
+Estilo customizado
+
 st.markdown("""
 
 <style>
-button {
-    border-radius: 8px !important;
-}
 .stButton>button {
+    border-radius: 8px !important;
     height: 3em;
-    width: 100%;
     font-size: 1.2em;
 }
 .result-box {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
+    margin-bottom: 1em;
 }
 .result {
     width: 32px;
@@ -29,116 +29,114 @@ button {
     border-radius: 50%;
     font-weight: bold;
     color: white;
+    font-size: 0.9em;
 }
-.result.C { background-color: red; }
-.result.V { background-color: blue; }
-.result.E { background-color: green; }
+.result.C { background-color: #d32f2f; }
+.result.V { background-color: #1976d2; }
+.result.E { background-color: #388e3c; }
 </style>""", unsafe_allow_html=True)
 
-Entrada manual dos resultados
+Input manual dos resultados
 
-st.subheader("🔢 Inserir Resultados (C = Casa, V = Visitante, E = Empate)") entrada = st.text_input("Digite os resultados separados por vírgula (Ex: C,V,V,C,E...)")
+st.subheader("🔢 Inserir Resultados (C = Casa, V = Visitante, E = Empate)") entrada = st.text_input("Digite os resultados separados por vírgula (Ex: C,V,V,C,E,...)")
 
-Funções para detectar padrões
+Funções de detecção de padrões
 
-def detectar_padroes(resultados): alertas = [] n = len(resultados)
+def detectar_padroes(res): n = len(res) alertas = []
 
 # 1. Surf de Cor
 for i in range(n - 2):
-    if resultados[i] == resultados[i+1] == resultados[i+2]:
-        alertas.append(f"Surf de cor detectado: 3+ vezes '{resultados[i]}' a partir da posição {i+1}")
+    if res[i] == res[i+1] == res[i+2]:
+        alertas.append(f"Surf de cor: 3x '{res[i]}' seguidas a partir da posição {i+1}")
         break
 
-# 2. Zig-Zag
+# 2. Zig-Zag (5 alternâncias)
 if n >= 5:
-    padrao = True
-    for i in range(2, 6):
-        if resultados[i % n] == resultados[(i-2) % n]:
-            padrao = False
-            break
-    if padrao:
-        alertas.append("Zig-Zag detectado nos últimos resultados")
+    zig = all(res[i] != res[i-1] for i in range(1,5))
+    if zig:
+        alertas.append("Zig-Zag detectado nas últimas 5 posições")
 
 # 3. Quebra de Surf
 for i in range(3, n):
-    if resultados[i] != resultados[i-1] and resultados[i-1] == resultados[i-2] == resultados[i-3]:
-        alertas.append(f"Quebra de surf na posição {i+1}: '{resultados[i]}' quebrou sequência de '{resultados[i-1]}'")
+    if res[i] != res[i-1] and res[i-1] == res[i-2] == res[i-3]:
+        alertas.append(f"Quebra de Surf: '{res[i]}' na posição {i+1} interrompeu sequência {res[i-1]}")
 
 # 4. Quebra de Zig-Zag
-for i in range(4, n):
-    if resultados[i-4] != resultados[i-3] and resultados[i-3] == resultados[i-1] and resultados[i] == resultados[i-2]:
+if n >= 4:
+    seq = res[-4:]
+    if seq[0] != seq[1] and seq[1] != seq[2] and seq[2] != seq[3] and not all(seq[i] != seq[i-1] for i in range(1,4)):
         alertas.append("Quebra de Zig-Zag detectada")
 
 # 5. Duplas Repetidas
 for i in range(n - 3):
-    if resultados[i] == resultados[i+1] and resultados[i+2] == resultados[i+3]:
+    if res[i] == res[i+1] and res[i+2] == res[i+3]:
         alertas.append("Duplas repetidas detectadas")
         break
 
 # 6. Empate Recorrente
-empates = [i for i, x in enumerate(resultados) if x == 'E']
-if len(empates) >= 2:
-    intervalos = [j - i for i, j in zip(empates[:-1], empates[1:])]
-    if any(x <= 3 for x in intervalos):
-        alertas.append("Empates recorrentes em intervalos curtos")
+idxE = [i for i, x in enumerate(res) if x == 'E']
+for a, b in zip(idxE, idxE[1:]):
+    if b - a <= 3:
+        alertas.append("Empates recorrentes em intervalo curto")
+        break
 
 # 7. Padrão Escada
-grupos = {}
-for i in resultados:
-    grupos[i] = grupos.get(i, 0) + 1
-if sorted(grupos.values()) == list(range(1, len(grupos)+1)):
+cont = {x: res.count(x) for x in ['C','V','E']}
+vals = sorted([v for v in cont.values() if v>0])
+if vals == list(range(1, len(vals)+1)):
     alertas.append("Padrão Escada detectado")
 
 # 8. Espelho
-if n >= 4:
-    for i in range(n - 3):
-        if resultados[i] == resultados[i+3] and resultados[i+1] == resultados[i+2]:
-            alertas.append("Padrão Espelho detectado")
+for i in range(n - 3):
+    if res[i] == res[i+3] and res[i+1] == res[i+2]:
+        alertas.append("Padrão Espelho detectado")
+        break
 
-# 9. Alternância com empate no meio
+# 9. Alternância com Empate no Meio
 for i in range(n - 2):
-    if resultados[i] == resultados[i+2] and resultados[i+1] == 'E':
-        alertas.append("Alternância com empate no meio detectado")
+    if res[i] == res[i+2] and res[i+1] == 'E':
+        alertas.append("Alternância com Empate no Meio detectada")
+        break
 
-# 10. Padrão Onda (1-2-1-2)
+# 10. Onda (1-2-1-2)
 if n >= 4:
-    if resultados[-4] != resultados[-3] and resultados[-2] != resultados[-1] and resultados[-4] == resultados[-2] and resultados[-3] == resultados[-1]:
+    seq = res[-4:]
+    if seq[0] == seq[2] and seq[1] == seq[3] and seq[0] != seq[1]:
         alertas.append("Padrão Onda (1-2-1-2) detectado")
 
-# 11. Análise Tática (últimos 5/7/10)
-for k in [5, 7, 10]:
+# 11. Frequência tática (últimos 5,7,10)
+for k in [5,7,10]:
     if n >= k:
-        sub = resultados[-k:]
-        count = {x: sub.count(x) for x in ['C','V','E']}
-        maior = max(count, key=count.get)
-        alertas.append(f"Nos últimos {k}, maior frequência foi: {maior} ({count[maior]})")
+        sub = res[-k:]
+        cnt = {x: sub.count(x) for x in ['C','V','E']}
+        maior = max(cnt, key=cnt.get)
+        alertas.append(f"Últimos {k}: maior frequência = {maior} ({cnt[maior]})")
 
 return alertas
 
-Processamento dos dados
+Processamento da entrada
 
-if entrada: resultados = [x.strip().upper() for x in entrada.split(',') if x.strip().upper() in ['C', 'V', 'E']] if len(resultados) < 5: st.warning("Digite ao menos 5 resultados para análise.") else: st.markdown("### 🧠 Histórico") for i in range(0, len(resultados), 9): linha = resultados[i:i+9] linha_html = '<div class="result-box">' + ''.join([f'<div class="result {r}">{r}</div>' for r in linha]) + '</div>' st.markdown(linha_html, unsafe_allow_html=True)
+if entrada: resultados = [x.strip().upper() for x in entrada.split(',') if x.strip().upper() in ['C','V','E']] if len(resultados) < 5: st.warning("Insira ao menos 5 resultados para análise.") else: # Exibir histórico em linhas de 9 st.markdown("### 🧠 Histórico (blocos de 9)") for i in range(0, len(resultados), 9): bloco = resultados[i:i+9] row = '<div class="result-box">' + ''.join([f'<div class="result {r}">{r}</div>' for r in bloco]) + '</div>' st.markdown(row, unsafe_allow_html=True)
 
-st.markdown("### 📊 Padrões Detectados")
-    alertas = detectar_padroes(resultados)
-
-    if alertas:
-        for alerta in alertas:
-            st.success(f"✅ {alerta}")
-            if 'Surf' in alerta:
-                st.markdown("**Sugestão:** Aproveite o surf! Entrada recomendada na mesma cor.")
-            elif 'Quebra' in alerta:
-                st.markdown("**Sugestão:** Aguardar estabilização antes de nova entrada.")
-            elif 'Empate' in alerta:
-                st.markdown("**Sugestão:** Fique atento ao empate nas próximas jogadas.")
+# Detectar padrões
+    st.markdown("### 📊 Padrões Detectados e Sugestões")
+    padroes = detectar_padroes(resultados)
+    if padroes:
+        for p in padroes:
+            st.success(f"✅ {p}")
+            # Sugestões básicas
+            if 'Surf' in p:
+                st.markdown("**Sugestão:** Aproveite a sequência, aposte na mesma cor.")
+            elif 'Quebra' in p:
+                st.markdown("**Sugestão:** Aguarde estabilização antes de nova entrada.")
+            elif 'Empates recorrentes' in p or 'Empate' in p:
+                st.markdown("**Sugestão:** Fique atento ao próximo empate.")
             else:
-                st.markdown("**Sugestão:** Analisar continuidade do padrão.")
+                st.markdown("**Sugestão:** Monitore continuidade do padrão.")
     else:
         st.info("Nenhum padrão forte detectado.")
 
 Rodapé
 
-st.markdown("""
-
-Desenvolvido por IA • ⚙️ Evolução Contínua """)
+st.markdown("---") st.write("Desenvolvido por IA • Aprendizado Contínuo 🚀")
 
