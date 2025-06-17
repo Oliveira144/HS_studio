@@ -3,9 +3,9 @@ import streamlit as st
 st.set_page_config(page_title="Football Studio HS", layout="wide")
 
 st.title("🎲 Football Studio HS — Analisador de Padrões")
-st.markdown("Aplicativo de análise automática dos últimos 50 resultados com foco em padrões avançados e sugestões de entrada seguras.")
+st.markdown("Analisa os últimos 50 resultados do jogo Football Studio e detecta padrões avançados com sugestões inteligentes.")
 
-# Sessão de histórico
+# ---------------------- HISTÓRICO GLOBAL ----------------------
 if 'cores' not in st.session_state:
     st.session_state.cores = []
 
@@ -15,7 +15,6 @@ cores = st.session_state.cores
 st.subheader("🎯 Inserir Resultado")
 
 col1, col2, col3 = st.columns(3)
-
 with col1:
     if st.button("🔴 Casa"):
         cores.append("C")
@@ -26,41 +25,35 @@ with col3:
     if st.button("🟡 Empate"):
         cores.append("E")
 
-# ---------------------- HISTÓRICO EM LINHAS DE 9 (ESQUERDA → DIREITA) ----------------------
-
-st.subheader("🧾 Histórico (ordem correta)")
+# ---------------------- HISTÓRICO EM LINHAS DE 9 (HORIZONTAL) ----------------------
+st.subheader("🧾 Histórico (últimos resultados em blocos de 9)")
 
 def exibir_historico(cores):
     if not cores:
         st.info("Nenhum resultado inserido ainda.")
         return
 
-    blocos = [cores[i:i+9] for i in range(0, len(cores), 9)]
+    blocos = [cores[i:i + 9] for i in range(0, len(cores), 9)]
 
-    for linha in blocos:
-        colunas = st.columns(9)
-        for i, cor in enumerate(linha):
+    for bloco in blocos:
+        colunas = st.columns(len(bloco))
+        for i, cor in enumerate(bloco):
             with colunas[i]:
                 if cor == "C":
-                    st.markdown("🔴", unsafe_allow_html=True)
+                    st.markdown("<div style='font-size:30px;'>🔴</div>", unsafe_allow_html=True)
                 elif cor == "V":
-                    st.markdown("🔵", unsafe_allow_html=True)
+                    st.markdown("<div style='font-size:30px;'>🔵</div>", unsafe_allow_html=True)
                 elif cor == "E":
-                    st.markdown("🟡", unsafe_allow_html=True)
+                    st.markdown("<div style='font-size:30px;'>🟡</div>", unsafe_allow_html=True)
 
 exibir_historico(cores)
 
 # ---------------------- FUNÇÕES DE PADRÕES ----------------------
-
 def detectar_surf(cores):
-    if len(cores) < 3:
-        return False
-    return cores[-1] == cores[-2] == cores[-3]
+    return len(cores) >= 3 and cores[-1] == cores[-2] == cores[-3]
 
 def detectar_quebra_surf(cores):
-    if len(cores) < 4:
-        return False
-    return cores[-4] == cores[-3] == cores[-2] and cores[-1] != cores[-2]
+    return len(cores) >= 4 and cores[-4] == cores[-3] == cores[-2] and cores[-1] != cores[-2]
 
 def detectar_zigzag(cores):
     if len(cores) < 4:
@@ -77,19 +70,13 @@ def detectar_empates_frequentes(cores):
     return cores.count("E") >= 4 and cores[-1] == "E"
 
 def detectar_duplas_repetidas(cores):
-    if len(cores) < 4:
-        return False
-    return cores[-4] == cores[-3] and cores[-2] == cores[-1] and cores[-4] != cores[-2]
+    return len(cores) >= 4 and cores[-4] == cores[-3] and cores[-2] == cores[-1] and cores[-4] != cores[-2]
 
 def detectar_3x1(cores):
-    if len(cores) < 4:
-        return False
-    return cores[-4] == cores[-3] == cores[-2] and cores[-1] != cores[-2]
+    return len(cores) >= 4 and cores[-4] == cores[-3] == cores[-2] and cores[-1] != cores[-2]
 
 def detectar_3x3(cores):
-    if len(cores) < 6:
-        return False
-    return cores[-6] == cores[-5] == cores[-4] and cores[-3] == cores[-2] == cores[-1]
+    return len(cores) >= 6 and cores[-6] == cores[-5] == cores[-4] and cores[-3] == cores[-2] == cores[-1]
 
 def detectar_escada(cores):
     if len(cores) < 6:
@@ -100,19 +87,16 @@ def detectar_escada(cores):
     return False
 
 def detectar_espelho(cores):
-    if len(cores) < 4:
-        return False
-    return cores[-4] == cores[-1] and cores[-3] == cores[-2]
+    return len(cores) >= 4 and cores[-4] == cores[-1] and cores[-3] == cores[-2]
 
 # ---------------------- ANÁLISE E SUGESTÕES ----------------------
-
 st.subheader("📈 Sugestões Inteligentes")
 
 sugestoes = []
 
 if detectar_surf(cores): sugestoes.append(("🔥 Surf de cor detectado — aposte nas próximas 3 rodadas", 90))
 if detectar_quebra_surf(cores): sugestoes.append(("⚠️ Quebra de Surf — Evite entrada imediata", 60))
-if detectar_zigzag(cores): sugestoes.append(("↔️ Zig-Zag detectado — Boa chance de alternância", 80))
+if detectar_zigzag(cores): sugestoes.append(("↔️ Zig-Zag detectado — boa chance de alternância", 80))
 if detectar_quebra_zigzag(cores): sugestoes.append(("❌ Quebra de Zig-Zag — padrão instável", 65))
 if detectar_empates_frequentes(cores): sugestoes.append(("⚠️ Empates frequentes — fique atento", 70))
 if detectar_duplas_repetidas(cores): sugestoes.append(("♻️ Duplas repetidas — possível sequência", 75))
@@ -128,14 +112,12 @@ else:
     st.info("Nenhum padrão claro detectado.")
 
 # ---------------------- BOTÃO DE RESET ----------------------
-
 st.markdown("---")
 if st.button("🧹 Reiniciar Histórico"):
     cores.clear()
     st.experimental_rerun()
 
 # ---------------------- ESTILO VISUAL ----------------------
-
 st.markdown("""
 <style>
     .stButton button {
