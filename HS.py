@@ -410,4 +410,167 @@ with col_input_seq:
         
         # Cria uma linha de índices e uma linha de resultados
         # Cada caractere na sequência tem um espaço, para alinhamento visual com os índices
-        formatted_indices
+        formatted_indices_line = ""
+        formatted_results_line = ""
+        
+        # Para cada caractere na sequência, adicione seu índice e o próprio caractere
+        for i, char in enumerate(current_seq_str):
+            idx_str = str(i + 1)
+            formatted_indices_line += idx_str
+            # Adiciona espaços após o índice para alinhar com o caractere do resultado
+            # Isso é para compensar o fato de que "1" é menor que "10", mas ambos ocupam 1 espaço na sequência
+            # No st.code, um 'C' ocupa 1 char, mas '10' ocupa 2. Vamos tentar alinhar.
+            # O truque é que ' ' * (LEN_RESULTADO - LEN_INDICE) não funciona bem aqui.
+            # Melhor usar ljust para preencher o espaço de cada índice.
+            
+            # Ajuste para alinhamento, considerando que o resultado é um único caractere ('C', 'V', 'E')
+            # E os índices podem ter 1 ou 2+ dígitos.
+            padding_needed_for_char = 1 # Cada resultado (C, V, E) tem 1 caractere de largura
+            padding_for_index = padding_needed_for_char - len(idx_str)
+            
+            formatted_indices_line += ' ' * padding_for_index
+            formatted_indices_line += " " # Espaço entre os números de índice
+
+            formatted_results_line += char + " " # Espaço entre os caracteres de resultado
+
+        # Remove o último espaço extra
+        formatted_indices_line = formatted_indices_line.strip()
+        formatted_results_line = formatted_results_line.strip()
+
+        st.code(f"Posições:  {formatted_indices_line}\nResultados: {formatted_results_line}")
+        
+        st.info(f"**DEBUG:** A sequência completa sendo analisada (do mais antigo ao mais recente) é: `{current_seq_str}`")
+
+    else:
+        st.info("Nenhum resultado adicionado ainda.")
+
+
+with col_suggestions_results:
+    # --- Executar Análise Automaticamente (e armazenar no session_state) ---
+    if st.session_state.current_sequence:
+        # Use uma cópia da sequência para evitar mutações que podem causar o NotNotFoundError
+        current_seq_for_analysis = list(st.session_state.current_sequence)
+
+        # Inicializa o dicionário com todas as chaves esperadas para evitar NameError
+        # Garante que todas as chaves estão presentes, mesmo que as listas de resultados estejam vazias
+        resultados_encontrados = {
+            "1. Sequência (Surf de Cor)": [],
+            "2. Zig-Zag": [],
+            "3. Quebra de Surf": [],
+            "4. Quebra de Zig-Zag": [],
+            "5. Duplas repetidas": [],
+            "6. Empate recorrente": [],
+            "7. Padrão Escada": [],
+            "8. Espelho": [],
+            "9. Alternância com empate no meio": [],
+            "10. Padrão 'onda'": [],
+            "11. Padrões de Previsão Tática": [],
+            "12. Padrão 3x1": [],
+            "13. Padrão 3x3": []
+        }
+
+        # Preenche o dicionário com os resultados das funções de detecção
+        resultados_encontrados["1. Sequência (Surf de Cor)"] = detectar_sequencia_surf(current_seq_for_analysis)
+        resultados_encontrados["2. Zig-Zag"] = detectar_zig_zag(current_seq_for_analysis)
+        resultados_encontrados["3. Quebra de Surf"] = detectar_quebra_surf(current_seq_for_analysis)
+        resultados_encontrados["4. Quebra de Zig-Zag"] = detectar_quebra_zig_zag(current_seq_for_analysis)
+        resultados_encontrados["5. Duplas repetidas"] = detectar_duplas_repetidas(current_seq_for_analysis)
+        resultados_encontrados["6. Empate recorrente"] = detectar_empate_recorrente(current_seq_for_analysis)
+        resultados_encontrados["7. Padrão Escada"] = detectar_padrao_escada(current_seq_for_analysis)
+        resultados_encontrados["8. Espelho"] = detectar_espelho(current_seq_for_analysis)
+        resultados_encontrados["9. Alternância com empate no meio"] = detectar_alternancia_empate_meio(current_seq_for_analysis)
+        resultados_encontrados["10. Padrão 'onda'"] = detectar_padrao_onda(current_seq_for_analysis)
+        resultados_encontrados["11. Padrões de Previsão Tática"] = analisar_previsao_tatica(current_seq_for_analysis)
+        resultados_encontrados["12. Padrão 3x1"] = detectar_padrao_3x1(current_seq_for_analysis)
+        resultados_encontrados["13. Padrão 3x3"] = detectar_padrao_3x3(current_seq_for_analysis)
+
+        sugestoes, possibilidades_empate = gerar_sugestoes(current_seq_for_analysis, resultados_encontrados)
+
+        # Armazenar resultados e sugestões no session_state para persistência
+        st.session_state.last_analysis_results = resultados_encontrados
+        st.session_state.last_suggestions = sugestoes
+        st.session_state.last_empate_possibilities = possibilidades_empate
+
+        # Adiciona a sequência atual ao histórico SOMENTE APÓS A ANÁLISE COMPLETA
+        # E se a sequência atual não for a mesma do último item no histórico (evita duplicatas)
+        current_seq_as_string = "".join(st.session_state.current_sequence)
+        if not st.session_state.history or current_seq_as_string != st.session_state.history[-1]:
+            st.session_state.history.append(current_seq_as_string)
+    else:
+        # Limpa os resultados da análise se a sequência estiver vazia
+        st.session_state.last_analysis_results = {}
+        st.session_state.last_suggestions = []
+        st.session_state.last_empate_possibilities = []
+
+
+    # --- Exibir Sugestões (parte de cima da coluna direita) ---
+    st.subheader("🎯 Sugestões de Entradas")
+    # Correção para o 'if s:' SyntaxError
+    if st.session_state.last_suggestions: 
+        st.markdown("**Considerando os padrões e tendências da sequência atual:**")
+        for s in st.session_state.last_suggestions:
+            st.info(f"- {s}")
+    else:
+        st.info("Não há sugestões claras de entradas com base nos padrões detectados nesta sequência.")
+
+    st.markdown("---")
+    st.subheader("🤝 Possibilidade de Empate")
+    if st.session_state.last_empate_possibilities:
+        st.markdown("**Fatores que indicam possibilidade de empate:**")
+        for pe in st.session_state.last_empate_possibilities:
+            st.warning(f"- {pe}")
+    else:
+        st.info("Nenhuma tendência forte para 'Empate' detectada nesta sequência.")
+
+    st.markdown("---")
+    st.subheader("📈 Padrões Detectados")
+    if st.session_state.last_analysis_results:
+        algum_padrao_detectado_display = False
+        for padrao, resultados in st.session_state.last_analysis_results.items():
+            if resultados:
+                st.success(f"✔️ **{padrao}:**")
+                for res in resultados:
+                    st.write(f"- {res}")
+                algum_padrao_detectado_display = True
+        if not algum_padrao_detectado_display:
+            st.info("Nenhum dos padrões definidos foi detectado na sequência fornecida.")
+    else:
+        st.info("Adicione resultados para ver a análise de padrões.")
+
+
+st.markdown("---")
+st.subheader("📚 Histórico de Análises")
+
+# Botão para zerar o histórico
+if st.button("🧹 Zerar Histórico", use_container_width=True, key="btn_clear_history"):
+    st.session_state.history = []
+    st.success("Histórico zerado!")
+    st.rerun()
+
+if st.session_state.history:
+    for i, entry in enumerate(st.session_state.history):
+        # Geração e formatação dos índices e da sequência para alinhamento visual para o histórico
+        formatted_indices_line_hist = ""
+        formatted_results_line_hist = ""
+        
+        for j, char_hist in enumerate(entry):
+            idx_str_hist = str(j + 1)
+            padding_needed_for_char_hist = 1
+            padding_for_index_hist = padding_needed_for_char_hist - len(idx_str_hist)
+
+            formatted_indices_line_hist += idx_str_hist
+            formatted_indices_line_hist += ' ' * padding_for_index_hist
+            formatted_indices_line_hist += " "
+
+            formatted_results_line_hist += char_hist + " "
+
+        formatted_indices_line_hist = formatted_indices_line_hist.strip()
+        formatted_results_line_hist = formatted_results_line_hist.strip()
+
+        st.code(f"Análise {i+1}:\nPosições:  {formatted_indices_line_hist}\nResultados: {formatted_results_line_hist}")
+else:
+    st.info("Nenhum histórico de análises ainda.")
+
+
+st.markdown("---")
+st.markdown("Desenvolvido para análise de padrões. Lembre-se: sugestões são baseadas em heurísticas e não garantem resultados.")
