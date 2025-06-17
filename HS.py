@@ -1,10 +1,14 @@
 import streamlit as st
-from collections import Counter
 import re
 
+# Configuração da página
 st.set_page_config(page_title="Football Studio HS", layout="wide")
 
-# ---------------------- Funções de Detecção ----------------------
+# Inicia o histórico na memória
+if 'cores' not in st.session_state:
+    st.session_state.cores = []
+
+# ---------------------- Funções de Detecção de Padrões ----------------------
 
 def detectar_surf(seq):
     return len(seq) >= 3 and seq[-1] == seq[-2] == seq[-3]
@@ -53,38 +57,48 @@ def detectar_3x1(seq):
 
 def detectar_3x3(seq):
     return len(seq) >= 6 and seq[-6] == seq[-5] == seq[-4] and seq[-3] == seq[-2] == seq[-1] and seq[-6] != seq[-3]
-    # ---------------------- Interface ----------------------
+    # ---------------------- Cabeçalho e botões ----------------------
 
 st.title("🎲 Football Studio HS - Detector de Padrões Avançados")
 
-cores_input = st.text_input("Digite os últimos resultados (C = Casa, V = Visitante, E = Empate):", "CCCVVVECCVVCCCEVVVCCVVVCEV")
-cores = list(cores_input.upper().strip())[-50:]
+st.subheader("🎯 Clique para registrar os resultados do jogo:")
 
-st.subheader("📊 Histórico de Resultados")
-for i in range(0, len(cores), 9):
-    linha = cores[i:i+9]
-    st.markdown(" ".join([
-        f"<span style='color:{'red' if c=='C' else 'blue' if c=='V' else 'orange'}; font-size:22px'>⬤</span>"
-        for c in linha
-    ]), unsafe_allow_html=True)
-
-col1, col2, col3 = st.columns(3)
+col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
 with col1:
     if st.button("🔴 Casa"):
-        cores.append("C")
+        st.session_state.cores.append("C")
 with col2:
     if st.button("🔵 Visitante"):
-        cores.append("V")
+        st.session_state.cores.append("V")
 with col3:
     if st.button("🟡 Empate"):
-        cores.append("E")
-        # ---------------------- Análise ----------------------
+        st.session_state.cores.append("E")
+with col4:
+    if st.button("🔁 Reiniciar"):
+        st.session_state.cores = []
+
+cores = st.session_state.cores[-50:]  # Limita a 50 entradas recentes
+
+# ---------------------- Exibição de Histórico ----------------------
+
+st.subheader("📊 Histórico (últimos até 50 jogos)")
+
+if cores:
+    for i in range(0, len(cores), 9):
+        linha = cores[i:i+9]
+        st.markdown(" ".join([
+            f"<span style='color:{'red' if c=='C' else 'blue' if c=='V' else 'orange'}; font-size:22px'>⬤</span>"
+            for c in linha
+        ]), unsafe_allow_html=True)
+else:
+    st.info("Nenhum resultado ainda. Clique nos botões para registrar jogadas.")
+    # ---------------------- Análise de Padrões ----------------------
 
 st.subheader("🔍 Padrões Detectados")
 
 alertas = []
 
-if detectar_surf(cores): alertas.append("🔴 SURF DE COR DETECTADO – entre nas próximas 3 rodadas")
+if detectar_surf(cores): alertas.append("🔥 SURF DE COR DETECTADO – entre nas próximas 3 jogadas")
 if detectar_zigzag(cores): alertas.append("🔄 ZIG-ZAG DETECTADO")
 if detectar_quebra_surf(cores): alertas.append("⚠️ QUEBRA DE SURF DETECTADA")
 if detectar_quebra_zigzag(cores): alertas.append("⚠️ QUEBRA DE ZIG-ZAG DETECTADA")
@@ -103,4 +117,4 @@ if alertas:
     for msg in alertas:
         st.success(msg)
 else:
-    st.warning("Nenhum padrão relevante detectado no momento.")
+    st.warning("Nenhum padrão detectado por enquanto.")
