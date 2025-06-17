@@ -1,142 +1,92 @@
 import streamlit as st
-from itertools import groupby
+from collections import deque
 
-st.set_page_config(page_title="Football Studio HS", layout="centered")
+# Configuração da página
+st.set_page_config(page_title="Football Studio HS", layout="wide")
 st.markdown("<h2 style='text-align: center; color: white;'>⚽ Football Studio HS – Análise Inteligente</h2>", unsafe_allow_html=True)
 
-st.markdown("### 🎮 Inserir resultado:")
+# Dicionários de ícones e nomes
+CORES = {"C": "🔴", "V": "🔵", "E": "🟡"}
+NOMES = {"C": "Casa", "V": "Visitante", "E": "Empate"}
+
+# Histórico
+if "historico" not in st.session_state:
+    st.session_state.historico = deque(maxlen=50)
+
+# Inserção de resultado
+st.subheader("🎮 Inserir resultado:")
 col1, col2, col3 = st.columns(3)
+if col1.button("🔴 Casa"):
+    st.session_state.historico.append("C")
+if col2.button("🔵 Visitante"):
+    st.session_state.historico.append("V")
+if col3.button("🟡 Empate"):
+    st.session_state.historico.append("E")
 
-# Armazenar os resultados
-if "resultados" not in st.session_state:
-    st.session_state.resultados = []
+# Exibir histórico em linhas de 9 (esquerda para direita)
+st.subheader("📜 Histórico (9 por linha)")
+def exibir_historico():
+    lista = list(st.session_state.historico)
+    linhas = [lista[i:i+9] for i in range(0, len(lista), 9)]
+    for linha in linhas:
+        cols = st.columns(9)
+        for i, valor in enumerate(linha):
+            cols[i].markdown(f"<h3 style='text-align: center'>{CORES[valor]}</h3>", unsafe_allow_html=True)
 
-# Função para adicionar resultado
-def adicionar_resultado(resultado):
-    st.session_state.resultados.append(resultado)
+exibir_historico()
 
-# Botões
-with col1:
-    if st.button("🔴 Casa"):
-        adicionar_resultado("C")
-with col2:
-    if st.button("🔵 Visitante"):
-        adicionar_resultado("V")
-with col3:
-    if st.button("🟡 Empate"):
-        adicionar_resultado("E")
-        st.markdown("### 🧾 Histórico (últimos resultados em blocos de 9)")
+# Análise de padrões
+def analisar_padroes(h):
+    h = list(h)
+    padroes = []
+    if len(h) >= 3 and h[-1] == h[-2] == h[-3]:
+        padroes.append(("Surf de Cor", f"Entrar em {NOMES[h[-1]]}", 85))
+    if len(h) >= 4 and h[-1] != h[-2] and h[-2] != h[-3] and h[-3] != h[-4]:
+        padroes.append(("Zig-Zag", f"Entrar em {NOMES[h[-1]]}", 75))
+    if len(h) >= 4 and h[-1] != h[-2] and h[-2] == h[-3] == h[-4]:
+        padroes.append(("Quebra de Surf", f"Entrar em {NOMES[h[-1]]}", 70))
+    if len(h) >= 4 and h[-1] == h[-2] == h[-3] and h[-4] != h[-3]:
+        padroes.append(("Quebra de Zig-Zag", f"Entrar em {NOMES[h[-1]]}", 68))
+    if len(h) >= 4 and h[-4] == h[-3] and h[-2] == h[-1] and h[-4] != h[-2]:
+        padroes.append(("Duplas Repetidas", f"Entrar em {NOMES[h[-1]]}", 72))
+    if h.count("E") >= 3:
+        padroes.append(("Empate Recorrente", "Empates frequentes, considerar evitar entrada", 65))
+    if len(h) >= 6 and h[-6] != h[-5] and h[-5] == h[-4] and h[-3] == h[-2] and h[-1] != h[-2]:
+        padroes.append(("Padrão Escada", f"Tendência crescente em {NOMES[h[-2]]}", 64))
+    if len(h) >= 4 and h[-4] == h[-1] and h[-3] == h[-2]:
+        padroes.append(("Espelho", f"Padrão reflexivo — considerar {NOMES[h[-1]]}", 68))
+    if len(h) >= 3 and h[-3] != h[-2] and h[-2] == "E" and h[-1] != "E":
+        padroes.append(("Alternância com Empate no meio", f"Possível inversão — entrar em {NOMES[h[-1]]}", 66))
+    if len(h) >= 4 and h[-4] != h[-3] and h[-3] == h[-2] and h[-2] != h[-1]:
+        padroes.append(("Padrão Onda", f"Entrada em {NOMES[h[-1]]} por onda reversa", 63))
+    if len(h) >= 5:
+        ultimos5 = h[-5:]
+        freq = {v: ultimos5.count(v) for v in set(ultimos5)}
+        mais_freq = max(freq, key=freq.get)
+        if freq[mais_freq] >= 3:
+            padroes.append(("Padrão últimos 5", f"Alta frequência de {NOMES[mais_freq]} nos últimos 5 ({freq[mais_freq]}x)", 70))
+    if len(h) >= 4 and h[-4] == h[-3] == h[-2] and h[-1] != h[-2]:
+        padroes.append(("Padrão 3x1", f"Possível inversão — entrar em {NOMES[h[-1]]}", 71))
+    if len(h) >= 6 and h[-6] == h[-5] == h[-4] and h[-3] == h[-2] == h[-1] and h[-6] != h[-3]:
+        padroes.append(("Padrão 3x3", f"Alternância forte — considerar entrada em {NOMES[h[-1]]}", 77))
+    return padroes
 
-# Função para exibir o histórico formatado
-def exibir_historico(cores):
-    if not cores:
-        st.info("Nenhum resultado inserido ainda.")
-        return
-
-    blocos = [cores[i:i + 9] for i in range(0, len(cores), 9)]
-    for bloco in blocos:
-        linha = ""
-        for cor in bloco:
-            if cor == "C":
-                linha += "🔴 "
-            elif cor == "V":
-                linha += "🔵 "
-            elif cor == "E":
-                linha += "🟡 "
-        st.markdown(f"<div style='font-size:30px;'>{linha.strip()}</div>", unsafe_allow_html=True)
-
-exibir_historico(st.session_state.resultados)
-# Função para detectar padrões no histórico
-def detectar_padroes(cores):
-    sugestoes = []
-    if len(cores) < 4:
-        return sugestoes
-
-    ultimos = cores[-10:]
-
-    # Surf de cor
-    if len(set(ultimos[-3:])) == 1:
-        sugestoes.append(("🌊 Surf detectado", f"Entrar seguindo a cor '{ultimos[-1]}'", 85))
-
-    # Quebra de surf
-    if len(ultimos) >= 4 and ultimos[-4] == ultimos[-3] == ultimos[-2] and ultimos[-1] != ultimos[-2]:
-        sugestoes.append(("💥 Quebra de Surf", "Sequência quebrada, mudança de padrão", 75))
-
-    # Zig-Zag
-    if len(ultimos) >= 4 and ultimos[-1] != ultimos[-2] and ultimos[-2] != ultimos[-3] and ultimos[-3] != ultimos[-4]:
-        sugestoes.append(("🔁 Zig-Zag", "Alternância detectada", 70))
-
-    # Duplas repetidas
-    if len(ultimos) >= 4 and ultimos[-4] == ultimos[-3] and ultimos[-2] == ultimos[-1]:
-        sugestoes.append(("♻️ Duplas repetidas", "Padrão duplo", 75))
-
-    # Empate frequente
-    empates = ultimos.count("E")
-    if empates >= 3:
-        sugestoes.append(("⚠️ Empate frequente", f"{empates} empates recentes", 65))
-
-    # Padrão 3x1
-    if len(ultimos) >= 4 and ultimos[-4] == ultimos[-3] == ultimos[-2] and ultimos[-1] != ultimos[-2]:
-        sugestoes.append(("🧱 Padrão 3x1", "3 de uma cor e 1 diferente", 60))
-
-    # Padrão 3x3
-    if len(ultimos) >= 6 and ultimos[-6] == ultimos[-5] == ultimos[-4] and ultimos[-3] == ultimos[-2] == ultimos[-1] and ultimos[-4] != ultimos[-3]:
-        sugestoes.append(("🔳 Padrão 3x3", "Três de uma cor seguidos por três de outra", 80))
-
-    # Padrão Espelho
-    if len(ultimos) >= 4 and ultimos[-4:] == ultimos[-4:][::-1]:
-        sugestoes.append(("🔄 Espelho", "Reflexo detectado", 68))
-
-    # Alternância com empate no meio (ex: C, E, V)
-    if len(ultimos) >= 3 and ultimos[-3] != ultimos[-1] and ultimos[-2] == "E":
-        sugestoes.append(("⚖️ Alternância com empate", "Empate entre duas cores diferentes", 60))
-
-    # Padrão Escada
-    if len(ultimos) >= 6:
-        grupos = [list(g) for k, g in groupby(ultimos)]
-        tamanhos = [len(g) for g in grupos]
-        if tamanhos == sorted(tamanhos) or tamanhos == sorted(tamanhos, reverse=True):
-            sugestoes.append(("📶 Padrão Escada", "Sequência em escadinha", 65))
-
-    # Padrão Onda (1-2-1-2 alternando)
-    if len(ultimos) >= 6:
-        ondas = [len(list(g)) for k, g in groupby(ultimos)]
-        if ondas[-4:] == [1,2,1,2] or ondas[-4:] == [2,1,2,1]:
-            sugestoes.append(("🌊 Onda", "Alternância tipo 1-2-1-2 detectada", 72))
-
-    # Análise últimos 5, 7, 10 jogos
-    for janela in [5, 7, 10]:
-        if len(cores) >= janela:
-            bloco = cores[-janela:]
-            mais_freq = max(set(bloco), key=bloco.count)
-            porcentagem = bloco.count(mais_freq) / janela * 100
-            if porcentagem >= 70:
-                cor_str = "Casa" if mais_freq == "C" else "Visitante" if mais_freq == "V" else "Empate"
-                sugestoes.append((f"📊 Tendência nos últimos {janela}", f"{cor_str} aparece {porcentagem:.0f}% das vezes", int(porcentagem)))
-
-    return sugestoes
-    st.markdown("### 🔍 Sugestões de Entrada Inteligente")
-
-# Executa a análise e mostra as sugestões
-sugestoes = detectar_padroes(st.session_state.resultados)
-
-if sugestoes:
-    for titulo, descricao, confianca in sugestoes:
-        st.success(f"**{titulo}**\n\n📌 {descricao} — 🎯 Confiança: {confianca}%")
+# Exibir sugestões
+st.subheader("📈 Sugestões de entrada")
+padroes = analisar_padroes(st.session_state.historico)
+if padroes:
+    for nome, acao, conf in padroes:
+        st.success(f"📌 {nome} — 💡 {acao} — 🎯 Confiança: {conf}%")
 else:
-    st.info("Nenhum padrão relevante detectado no momento.")
-    st.markdown("---")
-col4, col5 = st.columns(2)
+    st.info("Nenhum padrão forte detectado no momento.")
 
-# Botão para desfazer a última jogada
-with col4:
-    if st.button("↩️ Desfazer última"):
-        if st.session_state.resultados:
-            st.session_state.resultados.pop()
+# Ações extras
+colA, colB = st.columns(2)
+if colA.button("↩️ Desfazer último"):
+    if st.session_state.historico:
+        st.session_state.historico.pop()
+if colB.button("🧹 Limpar histórico"):
+    st.session_state.historico.clear()
 
-# Botão para reiniciar tudo
-with col5:
-    if st.button("🗑️ Limpar tudo"):
-        st.session_state.resultados = []
-
-st.markdown("<br><center><small>📊 Desenvolvido com Streamlit – Football Studio HS</small></center>", unsafe_allow_html=True)
+# Rodapé
+st.markdown("<hr><center>Desenvolvido com ❤️ por IA — Football Studio HS</center>", unsafe_allow_html=True)
