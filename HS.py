@@ -3,23 +3,23 @@ from collections import deque
 
 # Configuração inicial
 st.set_page_config(page_title="Football Studio HS", layout="wide")
-st.title("🎯 Football Studio - Análise Inteligente")
+st.title("🎯 Futebol - Análise Inteligente")
 
 # Cores e rótulos
 COLORS = {"C": "🔴", "V": "🔵", "E": "🟡"}
 LABELS = {"C": "Casa", "V": "Visitante", "E": "Empate"}
 
-# Histórico limitado a 50 entradas
+# Histórico de resultados
 if "historico" not in st.session_state:
     st.session_state.historico = deque(maxlen=50)
 
-# Função para exibir histórico em linhas de 9 (ordem real, esquerda para direita)
+# Função para mostrar o histórico em linhas de 9
 def mostrar_historico(historico):
     linhas = [list(historico)[i:i+9] for i in range(0, len(historico), 9)]
-    for linha in reversed(linhas):
-        st.markdown("".join([f"<span style='font-size:32px'>{COLORS[r]}</span>" for r in linha]), unsafe_allow_html=True)
+    for linha in linhas:
+        st.markdown("".join(f"<span style='font-size:30px'>{COLORS[r]}</span>" for r in linha), unsafe_allow_html=True)
 
-# Detectar padrões complexos
+# Detectar padrões
 def analisar_padroes(h):
     h = list(h)
     padroes = []
@@ -57,12 +57,15 @@ def analisar_padroes(h):
 
     return padroes
 
-# Sugestões no topo
-st.subheader("📈 Sugestões de Entrada")
+# Sugestão principal
+st.subheader("📈 Sugestão de Entrada")
+
 padroes = analisar_padroes(st.session_state.historico)
+
 if padroes:
-    for nome, acao, confianca in padroes:
-        st.success(f"📌 {nome} — 💡 {acao} — 🎯 Confiança: {confianca}%")
+    melhor_padrao = max(padroes, key=lambda x: x[2])
+    nome, acao, confianca = melhor_padrao
+    st.success(f"📌 **{nome}**\n\n💡 {acao}\n\n🎯 **Confiança: {confianca}%**")
 else:
     st.info("Nenhum padrão forte detectado no momento.")
 
@@ -76,8 +79,8 @@ if c2.button("🔵 Visitante"):
 if c3.button("🟡 Empate"):
     st.session_state.historico.appendleft("E")
 
-# Exibir histórico atualizado (linhas de 9)
-st.subheader("📜 Histórico de Resultados (em linhas de 9)")
+# Histórico de resultados
+st.subheader("📜 Histórico de Resultados (linhas de 9, ordem real)")
 mostrar_historico(st.session_state.historico)
 
 # Botões auxiliares
@@ -90,6 +93,5 @@ if cl2.button("🧹 Limpar tudo"):
 
 # Rodapé
 st.markdown("""
-<br><hr>
-<p style='text-align: center;'>Desenvolvido com ❤️ por IA — Football Studio HS</p>
+Desenvolvido com ❤️ por IA — Football Studio HS
 """, unsafe_allow_html=True)
