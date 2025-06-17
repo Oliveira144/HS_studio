@@ -6,7 +6,7 @@ st.set_page_config(page_title="Analisador de Padrões e Sugestões", layout="wid
 # --- Injeção de CSS para Estilização ---
 st.markdown("""
 <style>
-/* Estilo geral para todos os botões para forçar cor de texto e fontes */
+/* Estilo base para todos os botões para garantir reset */
 div.stButton > button {
     font-size: 1.2em;
     font-weight: bold;
@@ -21,36 +21,27 @@ div.stButton > button {
     align-items: center; /* Centraliza verticalmente */
 }
 
-/* Cor específica para o botão 'Casa (C)' - usando data-testid do Streamlit */
-button[data-testid="stButton-btn_casa"] {
+/* Cores específicas usando classes customizadas injetadas via key */
+.stButton > button[key="btn_casa"] {
     background-color: #DC3545 !important; /* Vermelho forte */
 }
 
-/* Cor específica para o botão 'Visitante (V)' */
-button[data-testid="stButton-btn_visitante"] {
+.stButton > button[key="btn_visitante"] {
     background-color: #007BFF !important; /* Azul forte */
 }
 
-/* Cor específica para o botão 'Empate (E)' */
-button[data-testid="stButton-btn_empate"] {
+.stButton > button[key="btn_empate"] {
     background-color: #6C757D !important; /* Cinza escuro */
 }
 
 /* Estilo para os botões de ação (Desfazer, Limpar, Zerar) */
-button[data-testid*="stButton-btn_"] { /* Seletor mais genérico para todos os botões com key que começa com 'btn_' */
+.stButton > button[key="btn_undo"],
+.stButton > button[key="btn_clear_current"],
+.stButton > button[key="btn_clear_history"] {
     background-color: #343A40 !important; /* Quase preto */
     font-size: 1em !important;
     padding: 8px 15px !important;
 }
-
-/* Sobrescreve as cores para os botões Casa, Visitante, Empate que são mais específicos */
-button[data-testid="stButton-btn_casa"],
-button[data-testid="stButton-btn_visitante"],
-button[data-testid="stButton-btn_empate"] {
-    font-size: 1.2em !important; /* Mantém o tamanho maior para estes */
-    padding: 10px 20px !important; /* Mantém o padding maior */
-}
-
 
 /* Estilo para o título de resultados e sugestões */
 h3 {
@@ -261,29 +252,22 @@ def gerar_sugestoes(sequence_list, resultados_encontrados):
     # Sugestões baseadas nos padrões detectados
     if resultados_encontrados.get("1. Sequência (Surf de Cor)"):
         for res in resultados_encontrados["1. Sequência (Surf de Cor)"]:
-            # Se a última ocorrência faz parte de uma sequência de surf, sugere continuar
-            # Reforçando a condição para que a sugestão seja relevante para o FINAL da sequência
             if ultima_ocorrencia and f"Sequência de '{ultima_ocorrencia}'" in res:
-                # Extrai a posição de início do padrão
                 try:
                     start_pos_str = res.split("iniciando na posição ")[-1].replace(".", "")
                     start_pos = int(start_pos_str)
                     pattern_length_str = res.split("por ")[-1].split(" vezes")[0]
                     pattern_length = int(pattern_length_str)
 
-                    # Verifica se o padrão de surf termina na última ou penúltima posição
                     if (start_pos + pattern_length - 1) == len(sequence_list):
                          sugestoes.append(f"**Sugestão:** Continuar o 'Surf de Cor' de **'{ultima_ocorrencia}'**.")
                 except ValueError:
-                    pass # Ignora se a string de posição não for um número válido
+                    pass
 
     if resultados_encontrados.get("2. Zig-Zag"):
-        # Verifica se o padrão Zig-Zag está nos últimos 2-4 elementos
         if ultima_ocorrencia and penultima_ocorrencia and len(sequence_list) >= 2:
-            # Check for CV or VC ending
             if (penultima_ocorrencia == 'C' and ultima_ocorrencia == 'V') or \
                (penultima_ocorrencia == 'V' and ultima_ocorrencia == 'C'):
-                # Check for longer zigzag before the last two, e.g., CVCVC
                 if len(sequence_list) >= 4 and sequence_list[-4] == penultima_ocorrencia and sequence_list[-3] == ultima_ocorrencia:
                     sugestoes.append(f"**Sugestão:** Continuar o 'Zig-Zag' com **'{penultima_ocorrencia}'**.")
 
@@ -309,7 +293,7 @@ def gerar_sugestoes(sequence_list, resultados_encontrados):
             sugestoes.append(f"**Considerar:** Padrão de 'Duplas Repetidas' (Ex: AABB). Pode haver uma nova dupla ou quebra de padrão.")
 
     if resultados_encontrados.get("6. Empate recorrente"):
-        if resultados_encontrados["6. Empate recorrente"]: # Verifica se há empates recorrentes detectados
+        if resultados_encontrados["6. Empate recorrente"]:
             possibilidades_empate.append("**Alta Possibilidade:** 'Empate' devido à recorrência.")
             sugestoes.append("Considerar 'Empate' devido à recorrência.")
 
@@ -373,17 +357,18 @@ with col_input_seq:
 
     btn_col1, btn_col2, btn_col3 = st.columns(3)
     with btn_col1:
+        # Adicione 'key' como seletor para o CSS. O Streamlit automaticamente adiciona isso ao HTML.
         if st.button("Casa (C)", use_container_width=True, key="btn_casa"):
             st.session_state.current_sequence.append('C')
-            st.rerun() # Dispara a reexecução e análise automática
+            st.rerun()
     with btn_col2:
         if st.button("Visitante (V)", use_container_width=True, key="btn_visitante"):
             st.session_state.current_sequence.append('V')
-            st.rerun() # Dispara a reexecução e análise automática
+            st.rerun()
     with btn_col3:
         if st.button("Empate (E)", use_container_width=True, key="btn_empate"):
             st.session_state.current_sequence.append('E')
-            st.rerun() # Dispara a reexecução e análise automática
+            st.rerun()
 
     st.markdown("---")
     st.subheader("Ações da Sequência")
@@ -404,39 +389,36 @@ with col_input_seq:
     if st.session_state.current_sequence:
         current_seq_str = "".join(st.session_state.current_sequence)
 
-        # Geração e formatação dos índices e da sequência para alinhamento visual
-        # Isso é uma tentativa de simular um alinhamento monospace em Streamlit st.code
-        # que pode não ser perfeito devido a largura de caracteres de números > 9.
-        
-        # Cria uma linha de índices e uma linha de resultados
-        # Cada caractere na sequência tem um espaço, para alinhamento visual com os índices
         formatted_indices_line = ""
         formatted_results_line = ""
         
-        # Para cada caractere na sequência, adicione seu índice e o próprio caractere
         for i, char in enumerate(current_seq_str):
             idx_str = str(i + 1)
-            formatted_indices_line += idx_str
-            # Adiciona espaços após o índice para alinhar com o caractere do resultado
-            # Isso é para compensar o fato de que "1" é menor que "10", mas ambos ocupam 1 espaço na sequência
-            # No st.code, um 'C' ocupa 1 char, mas '10' ocupa 2. Vamos tentar alinhar.
-            # O truque é que ' ' * (LEN_RESULTADO - LEN_INDICE) não funciona bem aqui.
-            # Melhor usar ljust para preencher o espaço de cada índice.
-            
-            # Ajuste para alinhamento, considerando que o resultado é um único caractere ('C', 'V', 'E')
-            # E os índices podem ter 1 ou 2+ dígitos.
-            padding_needed_for_char = 1 # Cada resultado (C, V, E) tem 1 caractere de largura
-            padding_for_index = padding_needed_for_char - len(idx_str)
-            
-            formatted_indices_line += ' ' * padding_for_index
-            formatted_indices_line += " " # Espaço entre os números de índice
+            # O Streamlit renderiza st.code com uma fonte monoespaçada.
+            # Para alinhar, cada "coluna" precisa ter a largura do maior elemento (o índice).
+            # Vamos prever um máximo de 2 dígitos para o índice, para não complicar muito.
+            # Se a sequência for muito longa (ex: mais de 99 resultados), precisaria de mais lógica.
+            max_idx_len = 2 # Assumindo até 99 resultados para um bom alinhamento
 
-            formatted_results_line += char + " " # Espaço entre os caracteres de resultado
-
+            # Centraliza o índice dentro do espaço de 2 caracteres, se o índice for de 1 dígito
+            if len(idx_str) == 1:
+                padded_idx_str = " " + idx_str # Adiciona espaço antes para alinhar à direita
+            else:
+                padded_idx_str = idx_str
+            
+            formatted_indices_line += padded_idx_str + " " # Espaço extra entre os números de índice
+            formatted_results_line += " " + char + " " # Espaço antes e depois do caractere para alinhamento
+            
         # Remove o último espaço extra
         formatted_indices_line = formatted_indices_line.strip()
         formatted_results_line = formatted_results_line.strip()
-
+        
+        # Ajusta para garantir que a linha de "Resultados" comece no mesmo ponto que "Posições"
+        # O 'st.code' adiciona um padding, e a string "Posições:  " tem 11 caracteres.
+        # "Resultados: " tem 12 caracteres.
+        # Precisamos de um espaço extra na linha de resultados para alinhar o primeiro caractere
+        # com o segundo caractere do índice (se o índice for de 1 dígito) ou com o primeiro (se for de 2)
+        
         st.code(f"Posições:  {formatted_indices_line}\nResultados: {formatted_results_line}")
         
         st.info(f"**DEBUG:** A sequência completa sendo analisada (do mais antigo ao mais recente) é: `{current_seq_str}`")
@@ -448,11 +430,8 @@ with col_input_seq:
 with col_suggestions_results:
     # --- Executar Análise Automaticamente (e armazenar no session_state) ---
     if st.session_state.current_sequence:
-        # Use uma cópia da sequência para evitar mutações que podem causar o NotNotFoundError
         current_seq_for_analysis = list(st.session_state.current_sequence)
 
-        # Inicializa o dicionário com todas as chaves esperadas para evitar NameError
-        # Garante que todas as chaves estão presentes, mesmo que as listas de resultados estejam vazias
         resultados_encontrados = {
             "1. Sequência (Surf de Cor)": [],
             "2. Zig-Zag": [],
@@ -469,7 +448,6 @@ with col_suggestions_results:
             "13. Padrão 3x3": []
         }
 
-        # Preenche o dicionário com os resultados das funções de detecção
         resultados_encontrados["1. Sequência (Surf de Cor)"] = detectar_sequencia_surf(current_seq_for_analysis)
         resultados_encontrados["2. Zig-Zag"] = detectar_zig_zag(current_seq_for_analysis)
         resultados_encontrados["3. Quebra de Surf"] = detectar_quebra_surf(current_seq_for_analysis)
@@ -486,26 +464,20 @@ with col_suggestions_results:
 
         sugestoes, possibilidades_empate = gerar_sugestoes(current_seq_for_analysis, resultados_encontrados)
 
-        # Armazenar resultados e sugestões no session_state para persistência
         st.session_state.last_analysis_results = resultados_encontrados
         st.session_state.last_suggestions = sugestoes
         st.session_state.last_empate_possibilities = possibilidades_empate
 
-        # Adiciona a sequência atual ao histórico SOMENTE APÓS A ANÁLISE COMPLETA
-        # E se a sequência atual não for a mesma do último item no histórico (evita duplicatas)
         current_seq_as_string = "".join(st.session_state.current_sequence)
         if not st.session_state.history or current_seq_as_string != st.session_state.history[-1]:
             st.session_state.history.append(current_seq_as_string)
     else:
-        # Limpa os resultados da análise se a sequência estiver vazia
         st.session_state.last_analysis_results = {}
         st.session_state.last_suggestions = []
         st.session_state.last_empate_possibilities = []
 
 
-    # --- Exibir Sugestões (parte de cima da coluna direita) ---
     st.subheader("🎯 Sugestões de Entradas")
-    # Correção para o 'if s:' SyntaxError
     if st.session_state.last_suggestions: 
         st.markdown("**Considerando os padrões e tendências da sequência atual:**")
         for s in st.session_state.last_suggestions:
@@ -541,7 +513,6 @@ with col_suggestions_results:
 st.markdown("---")
 st.subheader("📚 Histórico de Análises")
 
-# Botão para zerar o histórico
 if st.button("🧹 Zerar Histórico", use_container_width=True, key="btn_clear_history"):
     st.session_state.history = []
     st.success("Histórico zerado!")
@@ -549,20 +520,18 @@ if st.button("🧹 Zerar Histórico", use_container_width=True, key="btn_clear_h
 
 if st.session_state.history:
     for i, entry in enumerate(st.session_state.history):
-        # Geração e formatação dos índices e da sequência para alinhamento visual para o histórico
         formatted_indices_line_hist = ""
         formatted_results_line_hist = ""
         
         for j, char_hist in enumerate(entry):
             idx_str_hist = str(j + 1)
-            padding_needed_for_char_hist = 1
-            padding_for_index_hist = padding_needed_for_char_hist - len(idx_str_hist)
-
-            formatted_indices_line_hist += idx_str_hist
-            formatted_indices_line_hist += ' ' * padding_for_index_hist
-            formatted_indices_line_hist += " "
-
-            formatted_results_line_hist += char_hist + " "
+            if len(idx_str_hist) == 1:
+                padded_idx_str_hist = " " + idx_str_hist
+            else:
+                padded_idx_str_hist = idx_str_hist
+            
+            formatted_indices_line_hist += padded_idx_str_hist + " "
+            formatted_results_line_hist += " " + char_hist + " "
 
         formatted_indices_line_hist = formatted_indices_line_hist.strip()
         formatted_results_line_hist = formatted_results_line_hist.strip()
