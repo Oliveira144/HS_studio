@@ -3,61 +3,73 @@ from collections import Counter
 
 st.set_page_config(page_title="Analisador de Padrões e Sugestões", layout="wide", initial_sidebar_state="expanded")
 
-# --- Injeção de CSS para Estilização ---
+# --- Injeção de CSS ABRANGENTE para Estilização ---
+# Este bloco deve estar no início do script
 st.markdown("""
 <style>
-/* Estilo base para todos os botões para garantir reset */
+/* Reset básico para botões do Streamlit */
 div.stButton > button {
-    font-size: 1.2em;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; /* Fonte comum */
     font-weight: bold;
-    color: white !important; /* Garante que o texto seja branco */
-    border: none;
-    padding: 10px 20px;
-    border-radius: 5px;
-    box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
-    margin-bottom: 10px; /* Espaçamento entre os botões */
-    display: flex; /* Para centralizar o texto se o botão for wide */
-    justify-content: center; /* Centraliza horizontalmente */
-    align-items: center; /* Centraliza verticalmente */
+    color: white !important; /* Texto branco forçado */
+    border: none !important; /* Remove bordas padrão */
+    padding: 10px 20px !important; /* Espaçamento interno */
+    border-radius: 5px !important; /* Cantos arredondados */
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.2) !important; /* Sombra */
+    margin-bottom: 10px !important; /* Espaço inferior */
+    display: flex !important; /* Habilita flexbox para centralização */
+    justify-content: center !important; /* Centraliza horizontalmente o conteúdo do botão */
+    align-items: center !important; /* Centraliza verticalmente o conteúdo do botão */
+    cursor: pointer !important; /* Mostra o cursor de ponteiro */
+    transition: background-color 0.3s ease; /* Transição suave de cor */
 }
 
-/* Cores específicas usando classes customizadas injetadas via key */
-.stButton > button[key="btn_casa"] {
+/* Cores específicas para os botões de resultado */
+/* Usando data-testid para maior especificidade quando gerado pelo Streamlit */
+button[data-testid="stButton-btn_casa"] {
     background-color: #DC3545 !important; /* Vermelho forte */
+    font-size: 1.2em !important; /* Tamanho da fonte maior */
 }
 
-.stButton > button[key="btn_visitante"] {
+button[data-testid="stButton-btn_visitante"] {
     background-color: #007BFF !important; /* Azul forte */
+    font-size: 1.2em !important;
 }
 
-.stButton > button[key="btn_empate"] {
+button[data-testid="stButton-btn_empate"] {
     background-color: #6C757D !important; /* Cinza escuro */
+    font-size: 1.2em !important;
 }
 
 /* Estilo para os botões de ação (Desfazer, Limpar, Zerar) */
-.stButton > button[key="btn_undo"],
-.stButton > button[key="btn_clear_current"],
-.stButton > button[key="btn_clear_history"] {
+button[data-testid="stButton-btn_undo"],
+button[data-testid="stButton-btn_clear_current"],
+button[data-testid="stButton-btn_clear_history"] {
     background-color: #343A40 !important; /* Quase preto */
-    font-size: 1em !important;
-    padding: 8px 15px !important;
+    font-size: 1em !important; /* Tamanho da fonte menor para ações */
+    padding: 8px 15px !important; /* Padding menor */
+}
+
+/* Hover effects */
+div.stButton > button:hover {
+    filter: brightness(1.1); /* Escurece um pouco no hover */
 }
 
 /* Estilo para o título de resultados e sugestões */
 h3 {
     color: #FFD700; /* Dourado para títulos de seções importantes */
-    margin-top: 20px; /* Espaçamento acima do título */
-    margin-bottom: 15px; /* Espaçamento abaixo do título */
+    margin-top: 20px;
+    margin-bottom: 15px;
 }
 
-/* Cor de fundo para as caixas de informação/sugestão */
+/* Estilo para os alertas/caixas de informação (sugestões, possibilidades de empate) */
 div[data-testid="stAlert"] {
-    background-color: #282828 !important; /* Fundo mais escuro para alerts */
-    color: white !important;
+    background-color: #282828 !important; /* Fundo mais escuro */
+    color: white !important; /* Texto branco */
     border-left: 5px solid #FFD700 !important; /* Borda dourada */
-    padding: 10px;
-    margin-bottom: 10px;
-    border-radius: 5px;
+    padding: 10px !important;
+    margin-bottom: 10px !important;
+    border-radius: 5px !important;
 }
 div[data-testid="stAlert"] svg { /* Ícone dentro do alert */
     color: #FFD700 !important; /* Ícone dourado */
@@ -66,15 +78,22 @@ div[data-testid="stAlert"] div[role="alert"] p { /* Texto dentro do alert */
     color: white !important;
 }
 
-/* Estilo para o código da sequência atual e histórico */
+/* Estilo para o bloco de código da sequência atual e histórico */
 div.stCodeBlock {
-    background-color: #202020 !important; /* Fundo mais escuro para o bloco de código */
+    background-color: #202020 !important; /* Fundo mais escuro */
     color: #00FF00 !important; /* Texto verde neon (opcional, pode ser branco) */
-    border-radius: 5px;
-    padding: 10px;
-    font-family: 'monospace';
-    overflow-x: auto; /* Permite scroll horizontal se a sequência for muito longa */
+    border-radius: 5px !important;
+    padding: 10px !important;
+    font-family: 'monospace' !important;
+    overflow-x: auto !important; /* Permite scroll horizontal */
+    white-space: pre !important; /* Mantém espaços e quebras de linha */
 }
+
+/* Ajustes para o layout de colunas para garantir que o Streamlit não interfira */
+.st-emotion-cache-k3g099 { /* Este seletor pode mudar entre versões do Streamlit */
+    gap: 1rem !important; /* Garante espaçamento entre as colunas */
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -93,9 +112,7 @@ if 'last_empate_possibilities' not in st.session_state:
 
 
 # --- Funções de Detecção de Padrões ---
-# As 13 funções devem estar COMPLETAS aqui.
-# Certifique-se de que cada função está definida corretamente com 'def nome_da_funcao(seq):' e um 'return' válido.
-
+# (Manter as mesmas 13 funções de detecção de padrões completas aqui)
 def detectar_sequencia_surf(seq):
     """1. Sequência (Surf de Cor) – 3+ vezes a mesma cor seguida"""
     padroes_encontrados = []
@@ -241,7 +258,6 @@ def detectar_padrao_3x3(seq):
             padroes_encontrados.append(f"Padrão 3x3 detectado: '{seq[i]}' (3x) seguido por '{seq[i+3]}' (3x) na posição {i+1}.")
     return padroes_encontrados
 
-
 # --- Funções de Sugestão ---
 def gerar_sugestoes(sequence_list, resultados_encontrados):
     sugestoes = []
@@ -270,7 +286,6 @@ def gerar_sugestoes(sequence_list, resultados_encontrados):
                (penultima_ocorrencia == 'V' and ultima_ocorrencia == 'C'):
                 if len(sequence_list) >= 4 and sequence_list[-4] == penultima_ocorrencia and sequence_list[-3] == ultima_ocorrencia:
                     sugestoes.append(f"**Sugestão:** Continuar o 'Zig-Zag' com **'{penultima_ocorrencia}'**.")
-
 
     if resultados_encontrados.get("3. Quebra de Surf"):
         if ultima_ocorrencia and len(sequence_list) >= 4 and \
@@ -357,7 +372,6 @@ with col_input_seq:
 
     btn_col1, btn_col2, btn_col3 = st.columns(3)
     with btn_col1:
-        # Adicione 'key' como seletor para o CSS. O Streamlit automaticamente adiciona isso ao HTML.
         if st.button("Casa (C)", use_container_width=True, key="btn_casa"):
             st.session_state.current_sequence.append('C')
             st.rerun()
@@ -392,34 +406,20 @@ with col_input_seq:
         formatted_indices_line = ""
         formatted_results_line = ""
         
+        # Determine a largura máxima necessária para o índice + espaço
+        # Para 1-9: " 1 ", " 2 ", ...
+        # Para 10-99: "10 ", "11 ", ...
+        # Se você prevê mais de 99 resultados, ajuste `max_idx_len`
+        max_idx_len = len(str(len(current_seq_str))) # Dinâmico
+        if max_idx_len < 2: max_idx_len = 2 # Garante pelo menos 2 para alinhamento inicial
+
         for i, char in enumerate(current_seq_str):
             idx_str = str(i + 1)
-            # O Streamlit renderiza st.code com uma fonte monoespaçada.
-            # Para alinhar, cada "coluna" precisa ter a largura do maior elemento (o índice).
-            # Vamos prever um máximo de 2 dígitos para o índice, para não complicar muito.
-            # Se a sequência for muito longa (ex: mais de 99 resultados), precisaria de mais lógica.
-            max_idx_len = 2 # Assumindo até 99 resultados para um bom alinhamento
-
-            # Centraliza o índice dentro do espaço de 2 caracteres, se o índice for de 1 dígito
-            if len(idx_str) == 1:
-                padded_idx_str = " " + idx_str # Adiciona espaço antes para alinhar à direita
-            else:
-                padded_idx_str = idx_str
-            
-            formatted_indices_line += padded_idx_str + " " # Espaço extra entre os números de índice
-            formatted_results_line += " " + char + " " # Espaço antes e depois do caractere para alinhamento
-            
-        # Remove o último espaço extra
-        formatted_indices_line = formatted_indices_line.strip()
-        formatted_results_line = formatted_results_line.strip()
+            # Adiciona espaços para que o índice ocupe a `max_idx_len` + 1 espaço de padding
+            formatted_indices_line += idx_str.rjust(max_idx_len) + " " 
+            formatted_results_line += char.rjust(max_idx_len) + " " # Alinha o caractere com a mesma largura
         
-        # Ajusta para garantir que a linha de "Resultados" comece no mesmo ponto que "Posições"
-        # O 'st.code' adiciona um padding, e a string "Posições:  " tem 11 caracteres.
-        # "Resultados: " tem 12 caracteres.
-        # Precisamos de um espaço extra na linha de resultados para alinhar o primeiro caractere
-        # com o segundo caractere do índice (se o índice for de 1 dígito) ou com o primeiro (se for de 2)
-        
-        st.code(f"Posições:  {formatted_indices_line}\nResultados: {formatted_results_line}")
+        st.code(f"Posições:  {formatted_indices_line.strip()}\nResultados: {formatted_results_line.strip()}")
         
         st.info(f"**DEBUG:** A sequência completa sendo analisada (do mais antigo ao mais recente) é: `{current_seq_str}`")
 
@@ -433,19 +433,11 @@ with col_suggestions_results:
         current_seq_for_analysis = list(st.session_state.current_sequence)
 
         resultados_encontrados = {
-            "1. Sequência (Surf de Cor)": [],
-            "2. Zig-Zag": [],
-            "3. Quebra de Surf": [],
-            "4. Quebra de Zig-Zag": [],
-            "5. Duplas repetidas": [],
-            "6. Empate recorrente": [],
-            "7. Padrão Escada": [],
-            "8. Espelho": [],
-            "9. Alternância com empate no meio": [],
-            "10. Padrão 'onda'": [],
-            "11. Padrões de Previsão Tática": [],
-            "12. Padrão 3x1": [],
-            "13. Padrão 3x3": []
+            "1. Sequência (Surf de Cor)": [], "2. Zig-Zag": [], "3. Quebra de Surf": [],
+            "4. Quebra de Zig-Zag": [], "5. Duplas repetidas": [], "6. Empate recorrente": [],
+            "7. Padrão Escada": [], "8. Espelho": [], "9. Alternância com empate no meio": [],
+            "10. Padrão 'onda'": [], "11. Padrões de Previsão Tática": [],
+            "12. Padrão 3x1": [], "13. Padrão 3x3": []
         }
 
         resultados_encontrados["1. Sequência (Surf de Cor)"] = detectar_sequencia_surf(current_seq_for_analysis)
@@ -475,7 +467,6 @@ with col_suggestions_results:
         st.session_state.last_analysis_results = {}
         st.session_state.last_suggestions = []
         st.session_state.last_empate_possibilities = []
-
 
     st.subheader("🎯 Sugestões de Entradas")
     if st.session_state.last_suggestions: 
@@ -509,7 +500,6 @@ with col_suggestions_results:
     else:
         st.info("Adicione resultados para ver a análise de padrões.")
 
-
 st.markdown("---")
 st.subheader("📚 Histórico de Análises")
 
@@ -523,20 +513,15 @@ if st.session_state.history:
         formatted_indices_line_hist = ""
         formatted_results_line_hist = ""
         
+        max_idx_len_hist = len(str(len(entry)))
+        if max_idx_len_hist < 2: max_idx_len_hist = 2
+
         for j, char_hist in enumerate(entry):
             idx_str_hist = str(j + 1)
-            if len(idx_str_hist) == 1:
-                padded_idx_str_hist = " " + idx_str_hist
-            else:
-                padded_idx_str_hist = idx_str_hist
-            
-            formatted_indices_line_hist += padded_idx_str_hist + " "
-            formatted_results_line_hist += " " + char_hist + " "
+            formatted_indices_line_hist += idx_str_hist.rjust(max_idx_len_hist) + " "
+            formatted_results_line_hist += char_hist.rjust(max_idx_len_hist) + " "
 
-        formatted_indices_line_hist = formatted_indices_line_hist.strip()
-        formatted_results_line_hist = formatted_results_line_hist.strip()
-
-        st.code(f"Análise {i+1}:\nPosições:  {formatted_indices_line_hist}\nResultados: {formatted_results_line_hist}")
+        st.code(f"Análise {i+1}:\nPosições:  {formatted_indices_line_hist.strip()}\nResultados: {formatted_results_line_hist.strip()}")
 else:
     st.info("Nenhum histórico de análises ainda.")
 
