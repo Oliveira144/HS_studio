@@ -9,15 +9,15 @@ st.markdown("<h2 style='text-align: center; color: white;'>⚽ Futebol - Anális
 COLORS = {"C": "🔴", "V": "🔵", "E": "🟡"}
 LABELS = {"C": "Casa", "V": "Visitante", "E": "Empate"}
 
-# Histórico dos resultados
+# Histórico dos resultados (mais recente no fim)
 if "historico" not in st.session_state:
     st.session_state.historico = deque(maxlen=200)
 
-# Função para mostrar o histórico em blocos de 9 (mais recente em cima, esquerda para direita)
+# Função para mostrar o histórico: linhas de 9, mais recente na linha de cima
 def mostrar_historico(historico):
     h = list(historico)
     blocos = [h[i:i+9] for i in range(0, len(h), 9)]
-    blocos = blocos[::-1]  # linha de cima = mais recente
+    blocos = blocos[::-1]  # mais recentes no topo
 
     for linha in blocos:
         st.markdown(
@@ -29,25 +29,21 @@ def mostrar_historico(historico):
 
 # Detecta padrões
 def analisar_padroes(h):
-    h = list(h)
+    h = list(h)[::-1]  # analisar do mais recente para o mais antigo
     padroes = []
 
-    # Surf de Cor
     for i in range(len(h) - 2):
-        if h[i] == h[i + 1] == h[i + 2]:
+        if h[i] == h[i+1] == h[i+2]:
             padroes.append(("Surf de Cor", f"Entrar em {LABELS[h[i]]}", 85))
 
-    # Quebra de Surf
     for i in range(len(h) - 3):
-        if h[i] == h[i + 1] == h[i + 2] and h[i + 3] != h[i]:
-            padroes.append(("Quebra de Surf", f"Entrar em {LABELS[h[i + 3]]}", 70))
+        if h[i] == h[i+1] == h[i+2] and h[i+3] != h[i]:
+            padroes.append(("Quebra de Surf", f"Entrar em {LABELS[h[i+3]]}", 70))
 
-    # Zig-Zag
     for i in range(len(h) - 3):
-        if h[i] != h[i + 1] and h[i + 1] != h[i + 2] and h[i + 2] != h[i + 3]:
-            padroes.append(("Zig-Zag", f"Entrar em {LABELS[h[i + 3]]}", 75))
+        if h[i] != h[i+1] and h[i+1] != h[i+2] and h[i+2] != h[i+3]:
+            padroes.append(("Zig-Zag", f"Entrar em {LABELS[h[i+3]]}", 75))
 
-    # Padrões Reversos com Cores
     for i in range(len(h) - 5):
         bloco1 = h[i:i+3]
         for j in range(i+3, len(h) - 2):
@@ -55,7 +51,6 @@ def analisar_padroes(h):
             if bloco1[0] == bloco1[1] == bloco1[2] and bloco2[0] == bloco2[1] == bloco2[2] and bloco1[0] != bloco2[0]:
                 padroes.append(("Padrão Espelhado", f"Nova sequência em {LABELS[bloco2[0]]}", 72))
 
-    # Padrão últimos 5
     if len(h) >= 5:
         ultimos5 = h[:5]
         mais_freq = max(set(ultimos5), key=ultimos5.count)
@@ -63,19 +58,17 @@ def analisar_padroes(h):
         if freq >= 3:
             padroes.append(("Últimos 5", f"Alta frequência de {LABELS[mais_freq]} ({freq}x)", 70))
 
-    # Padrão 3x1
     for i in range(len(h) - 3):
-        if h[i] == h[i + 1] == h[i + 2] and h[i + 3] != h[i]:
-            padroes.append(("Padrão 3x1", f"Inversão — entrar em {LABELS[h[i + 3]]}", 71))
+        if h[i] == h[i+1] == h[i+2] and h[i+3] != h[i]:
+            padroes.append(("Padrão 3x1", f"Inversão — entrar em {LABELS[h[i+3]]}", 71))
 
-    # Padrão 3x3
     for i in range(len(h) - 5):
-        if h[i] == h[i + 1] == h[i + 2] and h[i + 3] == h[i + 4] == h[i + 5] and h[i] != h[i + 3]:
-            padroes.append(("Padrão 3x3", f"Alternância — possível entrada em {LABELS[h[i + 5]]}", 77))
+        if h[i] == h[i+1] == h[i+2] and h[i+3] == h[i+4] == h[i+5] and h[i] != h[i+3]:
+            padroes.append(("Padrão 3x3", f"Alternância — possível entrada em {LABELS[h[i+5]]}", 77))
 
     return padroes
 
-# 📈 Sugestão de entrada (apenas se houver 9 ou mais resultados)
+# 📈 Sugestão de entrada
 st.subheader("📈 Sugestões de Entrada")
 if len(st.session_state.historico) >= 9:
     padroes = analisar_padroes(st.session_state.historico)
@@ -92,11 +85,11 @@ else:
 st.subheader("🎮 Inserir Resultado")
 c1, c2, c3 = st.columns(3)
 if c1.button("🔴 Casa"):
-    st.session_state.historico.appendleft("C")
+    st.session_state.historico.append("C")
 if c2.button("🔵 Visitante"):
-    st.session_state.historico.appendleft("V")
+    st.session_state.historico.append("V")
 if c3.button("🟡 Empate"):
-    st.session_state.historico.appendleft("E")
+    st.session_state.historico.append("E")
 
 # 📜 Exibe histórico
 st.subheader("📜 Histórico de Resultados (linhas de 9)")
@@ -106,7 +99,7 @@ mostrar_historico(st.session_state.historico)
 cl1, cl2 = st.columns(2)
 if cl1.button("↩️ Desfazer último"):
     if st.session_state.historico:
-        st.session_state.historico.popleft()
+        st.session_state.historico.pop()
 if cl2.button("🧹 Limpar tudo"):
     st.session_state.historico.clear()
 
