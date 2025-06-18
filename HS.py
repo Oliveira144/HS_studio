@@ -631,6 +631,32 @@ with col3:
 
 st.markdown("---")
 
+# --- Histórico dos Últimos 100 Resultados (Horizontal) - MOVIMENTADO PARA CIMA ---
+st.header(f"Histórico dos Últimos {NUM_HISTORY_TO_DISPLAY} Resultados")
+if st.session_state.results:
+    history_to_display = st.session_state.results[:NUM_HISTORY_TO_DISPLAY]
+    
+    # Criar uma lista de strings de emojis
+    emojis_history_strings = [f"{get_result_emoji(r)}{get_color_emoji(get_color(r))}" for r in history_to_display]
+    
+    # Gerar as linhas de emojis como strings de markdown
+    history_lines = []
+    for i in range(0, len(emojis_history_strings), EMOJIS_PER_ROW):
+        line_emojis = emojis_history_strings[i : i + EMOJIS_PER_ROW]
+        history_lines.append(" ".join(line_emojis)) # Junta os emojis com espaço para uma única linha
+    
+    # Exibir cada linha de emojis
+    for line in history_lines:
+        st.markdown(f"<p style='white-space: nowrap; font-size: 2em;'>{line}</p>", unsafe_allow_html=True)
+    
+    st.markdown("---")
+    if st.button("Limpar Histórico Completo", type="secondary", key="btn_clear_history_top"):
+        clear_history()
+else:
+    st.write("Nenhum resultado registrado ainda. Adicione resultados para começar a análise!")
+
+st.markdown("---") # Separador após o histórico
+
 # --- Exibir Alerta de Garantia ---
 if st.session_state.guarantee_failed:
     st.error(f"🚨 **GARANTIA FALHOU NO PADRÃO: '{st.session_state.last_guarantee_pattern}' na rodada anterior.** Reanalisar e buscar novos padrões de segurança.")
@@ -716,30 +742,4 @@ with col_draw_analysis:
         st.write("Nenhum padrão de empate identificado ainda.")
 
 st.markdown("---")
-
-# --- Histórico dos Últimos 100 Resultados (Horizontal) ---
-st.header(f"Histórico dos Últimos {NUM_HISTORY_TO_DISPLAY} Resultados")
-if st.session_state.results:
-    history_to_display = st.session_state.results[:NUM_HISTORY_TO_DISPLAY]
-    
-    # Criar uma lista de strings de emojis
-    emojis_history_strings = [f"{get_result_emoji(r)}{get_color_emoji(get_color(r))}" for r in history_to_display]
-    
-    # Dividir em linhas de EMOJIS_PER_ROW emojis e exibir
-    for i in range(0, len(emojis_history_strings), EMOJIS_PER_ROW):
-        # Cria uma linha de colunas
-        cols = st.columns(EMOJIS_PER_ROW)
-        for j in range(EMOJIS_PER_ROW):
-            if (i + j) < len(emojis_history_strings):
-                with cols[j]: # Atribui o emoji à coluna atual
-                    st.markdown(emojis_history_strings[i + j])
-            else:
-                with cols[j]: # Preenche com espaço vazio se não houver mais emojis para manter o alinhamento
-                    st.markdown("") # Garante que a coluna ainda existe, mesmo que vazia
-    
-    st.markdown("---")
-    if st.button("Limpar Histórico Completo", type="secondary", key="btn_clear_history"):
-        clear_history()
-else:
-    st.write("Nenhum resultado registrado ainda. Adicione resultados para começar a análise!")
 
