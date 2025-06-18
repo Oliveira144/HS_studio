@@ -81,7 +81,7 @@ def analyze_surf(results):
             temp_draw_seq += 1
             temp_home_seq = 0
             temp_away_seq = 0
-        
+            
         max_home_sequence = max(max_home_sequence, temp_home_seq)
         max_away_sequence = max(max_away_sequence, temp_away_seq)
         max_draw_sequence = max(max_draw_sequence, temp_draw_seq)
@@ -220,7 +220,7 @@ def find_complex_patterns(results):
                            block2_colors[0] == block4_colors[0]:
                                 block_pattern_keys.append(f"Padrão Reversão/Bloco Alternado {block_size}x{block_size} ({block1_colors[0].capitalize()} {block2_colors[0].capitalize()})")
                     else:
-                         block_pattern_keys.append(f"Padrão Reversão/Bloco {block_size}x{block_size} ({block1_colors[0].capitalize()} {block2_colors[0].capitalize()})")
+                            block_pattern_keys.append(f"Padrão Reversão/Bloco {block_size}x{block_size} ({block1_colors[0].capitalize()} {block2_colors[0].capitalize()})")
     
     for key in block_pattern_keys:
         patterns[key] += 1
@@ -400,11 +400,11 @@ def generate_advanced_suggestion(results, surf_analysis, color_analysis, break_p
                     
                     if current_block_color == prev_block_color: # Se a sequência atual ainda é do mesmo bloco
                         if current_block_color == first_block_color and second_block_color != 'yellow':
-                            bet_scores[second_block_color] += 115
+                            bet_scores[second_block_color] += 115 # **CORREÇÃO APLICADA AQUI**
                             reasons[second_block_color].append(f"Padrão '{pattern.split('(')[0].strip()}' altamente recorrente ({count}x). Espera-se a reversão para {second_block_color.capitalize()}.")
                             guarantees[second_block_color].append(pattern)
                         elif current_block_color == second_block_color and first_block_color != 'yellow':
-                            bet_scores[first_block_color] += 115
+                            bet_scores[first_block_color] += 115 # **CORREÇÃO APLICADA AQUI**
                             reasons[first_block_color].append(f"Padrão '{pattern.split('(')[0].strip()}' altamente recorrente ({count}x). Espera-se a reversão para {first_block_color.capitalize()}.")
                             guarantees[first_block_color].append(pattern)
 
@@ -443,13 +443,13 @@ def generate_advanced_suggestion(results, surf_analysis, color_analysis, break_p
                     # Verifica se o padrão alternado na string bate com a sequência atual
                     # Ex: Zig-Zag (R-B-R) -> se a sequência atual é B-R, a próxima pode ser B
                     if "Red-Blue-Red" in pattern and current_pattern_segment == "Blue-Red":
-                        bet_scores['blue'] += 90 # Espera-se que volte para azul
-                        reasons['blue'].append(f"Padrão '{pattern.split('(')[0].strip()}' recorrente ({count}x). Espera-se o próximo alternado.")
-                        guarantees['blue'].append(pattern)
+                        bet_scores['away'] += 90 # **CORREÇÃO APLICADA AQUI: mudou de 'blue' para 'away'**
+                        reasons['away'].append(f"Padrão '{pattern.split('(')[0].strip()}' recorrente ({count}x). Espera-se o próximo alternado.")
+                        guarantees['away'].append(pattern)
                     elif "Blue-Red-Blue" in pattern and current_pattern_segment == "Red-Blue":
-                        bet_scores['red'] += 90 # Espera-se que volte para vermelho
-                        reasons['red'].append(f"Padrão '{pattern.split('(')[0].strip()}' recorrente ({count}x). Espera-se o próximo alternado.")
-                        guarantees['red'].append(pattern)
+                        bet_scores['home'] += 90 # **CORREÇÃO APLICADA AQUI: mudou de 'red' para 'home'**
+                        reasons['home'].append(f"Padrão '{pattern.split('(')[0].strip()}' recorrente ({count}x). Espera-se o próximo alternado.")
+                        guarantees['home'].append(pattern)
             
             # Padrão de Espelho
             if "Padrão Espelho" in pattern and len(results) >= 3:
@@ -469,9 +469,18 @@ def generate_advanced_suggestion(results, surf_analysis, color_analysis, break_p
                        get_color(results[2]) == c1_pattern:
                         
                         if c4_pattern != 'yellow': # Não sugere empate se o espelho termina em empate
-                            bet_scores[c4_pattern] += 95 # Aposta na cor que completa o espelho
+                            # **CORREÇÃO APLICADA AQUI:** 'red' ou 'blue' são mapeadas para 'home' ou 'away'
+                            if c4_pattern == 'red':
+                                bet_scores['home'] += 95
+                            elif c4_pattern == 'blue':
+                                bet_scores['away'] += 95
+                            # else: C4_pattern é amarelo, mas a condição `!= 'yellow'` já trata isso.
+
                             reasons[c4_pattern].append(f"Padrão '{pattern.split('(')[0].strip()}' recorrente ({count}x). Espera-se o fechamento do espelho com {c4_pattern.capitalize()}.")
-                            guarantees[c4_pattern].append(pattern)
+                            if c4_pattern == 'red':
+                                guarantees['home'].append(pattern)
+                            elif c4_pattern == 'blue':
+                                guarantees['away'].append(pattern)
 
 
     # --- Nível 3: Sugestões de Confiança Média (Pontuação 40-70) ---
@@ -586,7 +595,7 @@ def check_guarantee_status(suggested_bet_type, actual_result, guarantee_pattern)
     # Se a sugestão foi "home" e o resultado não foi "home", falha.
     elif suggested_bet_type == 'home' and actual_result != 'home':
         return False
-    # Se a sugestão foi "away" e o resultado não foi "away", falha.
+    # Se a sugestão foi "away' e o resultado não foi "away", falha.
     elif suggested_bet_type == 'away' and actual_result != 'away':
         return False
     
@@ -620,169 +629,136 @@ if 'last_suggestion_confidence' not in st.session_state:
 def add_result(result_type):
     # 1. Verificar a garantia da rodada ANTERIOR (se houver sugestão com alta confiança)
     #    Isso é feito ANTES de adicionar o NOVO resultado.
-    if st.session_state.last_suggested_bet_type != 'none' and st.session_state.last_suggestion_confidence >= 70:
-        if not check_guarantee_status(st.session_state.last_suggested_bet_type, result_type, st.session_state.last_guarantee_pattern):
-            st.session_state.guarantee_failed = True
-        else:
-            st.session_state.guarantee_failed = False
+    if st.session_state.last_suggested_bet_type != 'none' and st.session_state.last_suggestion_confidence > 70: # Considera "garantia" apenas para sugestões de alta confiança
+        guarantee_passed = check_guarantee_status(
+            st.session_state.last_suggested_bet_type,
+            result_type, # O 'result_type' passado aqui é o resultado REAL da rodada anterior
+            st.session_state.last_guarantee_pattern
+        )
+        st.session_state.guarantee_failed = not guarantee_passed
     else:
-        st.session_state.guarantee_failed = False # Reset se não havia sugestão relevante
+        st.session_state.guarantee_failed = False # Não havia sugestão de alta confiança, então não falhou.
 
-    # 2. Adicionar o novo resultado ao topo do histórico
-    st.session_state.results.insert(0, result_type) 
-    # 3. Limitar o tamanho do histórico
-    st.session_state.results = st.session_state.results[:MAX_HISTORY_TO_STORE] 
-    
-    # 4. Recalcular toda a análise com o histórico ATUALIZADO
+
+    # 2. Adicionar o novo resultado ao histórico
+    st.session_state.results.insert(0, result_type) # Adiciona no início para manter o mais recente em results[0]
+    st.session_state.results = st.session_state.results[:MAX_HISTORY_TO_STORE] # Limita o tamanho do histórico
+
+    # 3. Recalcular a análise e a nova sugestão
     st.session_state.analysis_data = update_analysis(st.session_state.results)
-    
-    # 5. Atualizar as informações da ÚLTIMA SUGESTÃO para a próxima rodada
-    #    Essas são as informações que serão usadas na VERIFICAÇÃO da PRÓXIMA rodada
-    current_suggestion_data = st.session_state.analysis_data['suggestion']
-    st.session_state.last_suggested_bet_type = current_suggestion_data['bet_type']
-    st.session_state.last_guarantee_pattern = current_suggestion_data['guarantee_pattern']
-    st.session_state.last_suggestion_confidence = current_suggestion_data['confidence']
-    
-    # O Streamlit automaticamente re-executa o script quando um botão é clicado,
-    # atualizando a interface com o novo st.session_state. Não é necessário st.experimental_rerun() aqui.
 
-# --- Função para Limpar Histórico ---
-def clear_history():
-    st.session_state.results = []
-    st.session_state.analysis_data = update_analysis([]) # Recalcula análise com histórico vazio
-    st.session_state.last_suggested_bet_type = 'none'
-    st.session_state.last_guarantee_pattern = "N/A"
-    st.session_state.guarantee_failed = False
-    st.session_state.last_suggestion_confidence = 0
-    st.experimental_rerun() # Usado aqui para forçar um reset visual completo.
+    # 4. Atualizar as últimas informações da sugestão para a PRÓXIMA rodada
+    st.session_state.last_suggested_bet_type = st.session_state.analysis_data['suggestion']['bet_type']
+    st.session_state.last_guarantee_pattern = st.session_state.analysis_data['suggestion']['guarantee_pattern']
+    st.session_state.last_suggestion_confidence = st.session_state.analysis_data['suggestion']['confidence']
 
-# --- Layout ---
-st.header("Registrar Resultado")
+# --- Seção de Inserir Resultado ---
+st.header("🎯 Inserir Resultado")
+
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    # Os botões de registro ainda manterão o ícone original para clareza da ação
-    if st.button(f"CASA {get_color_emoji('red')} 🏠", key="btn_home", use_container_width=True):
-        add_result('home')
+    st.button("Casa", on_click=add_result, args=('home',), use_container_width=True)
 with col2:
-    if st.button(f"VISITANTE {get_color_emoji('blue')} ✈️", key="btn_away", use_container_width=True):
-        add_result('away')
+    st.button("Visitante", on_click=add_result, args=('away',), use_container_width=True)
 with col3:
-    if st.button(f"EMPATE {get_color_emoji('yellow')} 🤝", key="btn_draw", use_container_width=True):
-        add_result('draw')
+    st.button("Empate", on_click=add_result, args=('draw',), use_container_width=True)
 
-st.markdown("---")
-
-# --- Histórico dos Últimos 100 Resultados (Horizontal) - MOVIMENTADO PARA CIMA ---
-st.header(f"Histórico dos Últimos {NUM_HISTORY_TO_DISPLAY} Resultados")
-if st.session_state.results:
-    history_to_display = st.session_state.results[:NUM_HISTORY_TO_DISPLAY]
-    
-    # Criar uma lista de strings de emojis (agora só as bolinhas)
-    emojis_history_strings = [f"{get_color_emoji(get_color(r))}" for r in history_to_display]
-    
-    # Gerar as linhas de emojis como strings de markdown
-    history_lines = []
-    for i in range(0, len(emojis_history_strings), EMOJIS_PER_ROW):
-        line_emojis = emojis_history_strings[i : i + EMOJIS_PER_ROW]
-        history_lines.append(" ".join(line_emojis)) # Junta os emojis com espaço para uma única linha
-    
-    # Exibir cada linha de emojis (TAMANHO DA FONTE AJUSTADO PARA 1.2EM)
-    for line in history_lines:
-        st.markdown(f"<p style='white-space: nowrap; font-size: 1.2em;'>{line}</p>", unsafe_allow_html=True) 
-    
-    st.markdown("---")
-    if st.button("Limpar Histórico Completo", type="secondary", key="btn_clear_history_top"):
-        clear_history()
-else:
-    st.write("Nenhum resultado registrado ainda. Adicione resultados para começar a análise!")
-
-st.markdown("---") # Separador após o histórico
-
-# --- Exibir Alerta de Garantia ---
+# Exibir status da garantia (se falhou na última rodada)
 if st.session_state.guarantee_failed:
-    st.error(f"🚨 **GARANTIA FALHOU NO PADRÃO: '{st.session_state.last_guarantee_pattern}' na rodada anterior.** Reanalisar e buscar novos padrões de segurança.")
-    st.write("É recomendado observar as próximas rodadas sem apostar ou redefinir o histórico.")
-
-st.header("Análise IA e Sugestão")
-if st.session_state.results:
-    suggestion = st.session_state.analysis_data['suggestion']
-    
-    st.info(f"**Sugestão:** {suggestion['suggestion']}")
-    st.metric(label="Confiança", value=f"{suggestion['confidence']}%")
-    st.write(f"**Motivo:** {suggestion['reason']}")
-    st.write(f"**Padrão de Garantia da Sugestão:** `{suggestion['guarantee_pattern']}`")
+    st.error(f"❌ A garantia '{st.session_state.last_guarantee_pattern}' da rodada anterior **FALHOU**!")
 else:
-    st.info(f"Aguardando no mínimo {MIN_RESULTS_FOR_SUGGESTION} resultados para gerar análises e sugestões.")
+    if st.session_state.last_suggested_bet_type != 'none' and st.session_state.last_suggestion_confidence > 70:
+        st.success(f"✅ A garantia '{st.session_state.last_guarantee_pattern}' da rodada anterior **PASSOU**!")
 
 st.markdown("---")
 
-# --- Estatísticas e Padrões (Últimos 27 Resultados) ---
-st.header(f"Estatísticas e Padrões (Últimos {NUM_RECENT_RESULTS_FOR_ANALYSIS} Resultados)")
+# --- Histórico de Resultados ---
+st.header("📜 Histórico (mais recente acima, esquerda → direita)")
 
-stats_col, color_col = st.columns(2)
-
-with stats_col:
-    st.subheader("Estatísticas Gerais")
-    stats = st.session_state.analysis_data['stats']
-    st.write(f"**Casa {get_color_emoji('red')}:** {stats['home']} vezes")
-    st.write(f"**Visitante {get_color_emoji('blue')}:** {stats['away']} vezes")
-    st.write(f"**Empate {get_color_emoji('yellow')}:** {stats['draw']} vezes")
-    st.write(f"**Total de Resultados Analisados:** {stats['total']}")
-
-with color_col:
-    st.subheader("Análise de Cores")
-    colors = st.session_state.analysis_data['color_analysis']
-    st.write(f"**Vermelho:** {colors['red']}x")
-    st.write(f"**Azul:** {colors['blue']}x")
-    st.write(f"**Amarelo:** {colors['yellow']}x")
-    st.write(f"**Sequência Atual:** {colors['streak']}x {colors['current_color'].capitalize()} {get_color_emoji(colors['current_color'])}")
-    st.markdown(f"**Padrão (Últimos {NUM_RECENT_RESULTS_FOR_ANALYSIS}):** `{colors['color_pattern_27']}`")
-
-st.markdown("---")
-
-# --- Análise de Quebra, Surf e Empate ---
-col_break, col_surf, col_draw_analysis = st.columns(3)
-
-with col_break:
-    st.subheader("Análise de Quebra")
-    bp = st.session_state.analysis_data['break_probability']
-    st.write(f"**Chance de Quebra:** {bp['break_chance']}%")
-    st.write(f"**Último Tipo de Quebra:** {bp['last_break_type'] if bp['last_break_type'] else 'N/A'}")
+if st.session_state.results:
+    # Exibir apenas os primeiros NUM_HISTORY_TO_DISPLAY resultados
+    display_results = st.session_state.results[:NUM_HISTORY_TO_DISPLAY]
     
-    st.subheader("Padrões Complexos e Quebras")
-    patterns = st.session_state.analysis_data['break_patterns']
-    if patterns:
-        for pattern, count in patterns.items():
-            # Exibe apenas o nome do padrão e a contagem
-            st.write(f"- {pattern}: {count}x")
-    else:
-        st.write(f"Nenhum padrão complexo identificado nos últimos {NUM_RECENT_RESULTS_FOR_ANALYSIS} resultados.")
+    # Organizar emojis em linhas
+    emoji_string = ""
+    for i, result in enumerate(display_results):
+        emoji_string += get_color_emoji(get_color(result))
+        if (i + 1) % EMOJIS_PER_ROW == 0:
+            emoji_string += "\n" # Adiciona quebra de linha
+    st.markdown(emoji_string)
+else:
+    st.info("Nenhum resultado inserido ainda.")
 
-with col_surf:
-    st.subheader("Análise de Surf")
-    surf = st.session_state.analysis_data['surf_analysis']
-    st.write(f"**Seq. Atual Casa {get_color_emoji('red')}:** {surf['home_sequence']}x")
-    st.write(f"**Seq. Atual Visitante {get_color_emoji('blue')}:** {surf['away_sequence']}x")
-    st.write(f"**Seq. Atual Empate {get_color_emoji('yellow')}:** {surf['draw_sequence']}x")
-    st.write(f"---")
-    st.write(f"**Máx. Seq. Casa (Histórico):** {surf['max_home_sequence']}x")
-    st.write(f"**Máx. Seq. Visitante (Histórico):** {surf['max_away_sequence']}x")
-    st.write(f"**Máx. Seq. Empate (Histórico):** {surf['max_draw_sequence']}x")
-
-with col_draw_analysis:
-    st.subheader("Análise Detalhada de Empates")
-    draw_data = st.session_state.analysis_data['draw_specifics']
-    st.write(f"**Frequência Empate ({NUM_RECENT_RESULTS_FOR_ANALYSIS}):** {draw_data['draw_frequency_27']}%")
-    st.write(f"**Rodadas sem Empate:** {draw_data['time_since_last_draw']} (Desde o último empate)")
-    st.write(f"**Empate Recorrente:** {'✅ Sim' if draw_data['recurrent_draw'] else '❌ Não'}")
-    
-    st.subheader("Padrões de Empate Históricos")
-    if draw_data['draw_patterns']:
-        for pattern, count in draw_data['draw_patterns'].items():
-            # Exibe apenas o nome do padrão e a contagem
-            st.write(f"- {pattern}: {count}x")
-    else:
-        st.write("Nenhum padrão de empate identificado ainda.")
+# Botão para limpar histórico
+if st.session_state.results:
+    if st.button("Limpar Histórico Completo", use_container_width=True):
+        st.session_state.results = []
+        st.session_state.analysis_data = update_analysis([]) # Reinicia a análise
+        st.session_state.last_suggested_bet_type = 'none'
+        st.session_state.last_guarantee_pattern = "N/A"
+        st.session_state.guarantee_failed = False
+        st.session_state.last_suggestion_confidence = 0
+        st.experimental_rerun() # Recarregar a página para limpar o histórico visualmente
 
 st.markdown("---")
+
+# --- Análise IA e Sugestão ---
+st.header("📊 Análise IA e Sugestão")
+
+suggestion_data = st.session_state.analysis_data['suggestion']
+
+if suggestion_data['bet_type'] != 'none' and suggestion_data['confidence'] > 0:
+    st.info(f"**Sugestão:** {suggestion_data['suggestion']}")
+    st.metric(label="Confiança", value=f"{suggestion_data['confidence']}%")
+    st.write(f"**Motivo:** {suggestion_data['reason']}")
+    st.write(f"**Padrão de Garantia da Sugestão:** {suggestion_data['guarantee_pattern']}")
+
+    # Adicionando um texto para o cenário de "garantia falha"
+    if suggestion_data['guarantee_pattern'] != 'Nenhum Padrão Forte':
+        if suggestion_data['bet_type'] == 'home':
+            st.write(f"Previsão: **CASA** {get_color_emoji('red')}")
+        elif suggestion_data['bet_type'] == 'away':
+            st.write(f"Previsão: **VISITANTE** {get_color_emoji('blue')}")
+        elif suggestion_data['bet_type'] == 'draw':
+            st.write(f"Previsão: **EMPATE** {get_color_emoji('yellow')}")
+
+else:
+    st.info(suggestion_data['suggestion']) # Exibe a mensagem de aguardando resultados
+
+st.markdown("---")
+
+# --- Detalhes da Análise (Para Debug/Aprofundamento) ---
+st.header("🔍 Detalhes da Análise")
+st.subheader("Frequência de Resultados (Últimos 27)")
+st.json(st.session_state.analysis_data['stats'])
+
+st.subheader("Análise de Surf (Sequências)")
+st.json(st.session_state.analysis_data['surf_analysis'])
+
+st.subheader("Contagem de Cores e Sequência Atual")
+st.json(st.session_state.analysis_data['color_analysis'])
+
+st.subheader("Padrões de Quebra e Complexos")
+if st.session_state.analysis_data['break_patterns']:
+    # Converte o dicionário em DataFrame para melhor visualização e ordenação
+    patterns_df = pd.DataFrame(st.session_state.analysis_data['break_patterns'].items(), columns=['Padrão', 'Ocorrências'])
+    patterns_df = patterns_df.sort_values(by='Ocorrências', ascending=False)
+    st.dataframe(patterns_df, hide_index=True)
+else:
+    st.info("Nenhum padrão complexo detectado ainda.")
+
+st.subheader("Probabilidade de Quebra Geral")
+st.json(st.session_state.analysis_data['break_probability'])
+
+st.subheader("Análise de Empates")
+st.json(st.session_state.analysis_data['draw_specifics'])
+
+# Informações adicionais da sessão (para debug)
+st.subheader("Variáveis de Sessão (Debug)")
+st.json({
+    'last_suggested_bet_type': st.session_state.last_suggested_bet_type,
+    'last_guarantee_pattern': st.session_state.last_guarantee_pattern,
+    'guarantee_failed': st.session_state.guarantee_failed,
+    'last_suggestion_confidence': st.session_state.last_suggestion_confidence
+})
