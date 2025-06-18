@@ -9,18 +9,25 @@ st.markdown("<h2 style='text-align: center; color: white;'>⚽ Futebol - Anális
 COLORS = {"C": "🔴", "V": "🔵", "E": "🟡"}
 LABELS = {"C": "Casa", "V": "Visitante", "E": "Empate"}
 
-# Histórico
+# Histórico dos resultados
 if "historico" not in st.session_state:
     st.session_state.historico = deque(maxlen=200)
 
-# Mostrar histórico (blocos de 9, linha mais recente em cima)
+# Função para mostrar o histórico em blocos de 9 (em linha, mais recentes acima)
 def mostrar_historico(historico):
-    linhas = [list(historico)[i:i+9] for i in range(0, len(historico), 9)]
-    linhas = linhas[::-1]  # Inverte para mostrar a mais recente primeiro
-    for linha in linhas:
-        st.markdown("".join([f"<span style='font-size:32px'>{COLORS[c]}</span> " for c in linha]), unsafe_allow_html=True)
+    h = list(historico)
+    blocos = [h[i:i+9] for i in range(0, len(h), 9)]
+    blocos = blocos[::-1]  # Mais recentes em cima
 
-# Detectar padrões
+    for linha in blocos:
+        st.markdown(
+            "<div style='display: flex; gap: 10px; justify-content: center;'>" +
+            "".join(f"<div style='font-size: 32px'>{COLORS.get(c, '')}</div>" for c in linha) +
+            "</div>",
+            unsafe_allow_html=True
+        )
+
+# Detecta padrões em qualquer parte do histórico
 def analisar_padroes(h):
     h = list(h)
     padroes = []
@@ -40,7 +47,7 @@ def analisar_padroes(h):
         if h[i] != h[i + 1] and h[i + 1] != h[i + 2] and h[i + 2] != h[i + 3]:
             padroes.append(("Zig-Zag", f"Entrar em {LABELS[h[i + 3]]}", 75))
 
-    # Padrão espelhado com cores trocadas
+    # Padrões Reversos por cor
     for i in range(len(h) - 5):
         bloco1 = h[i:i+3]
         for j in range(i+3, len(h) - 2):
@@ -48,7 +55,7 @@ def analisar_padroes(h):
             if bloco1[0] == bloco1[1] == bloco1[2] and bloco2[0] == bloco2[1] == bloco2[2] and bloco1[0] != bloco2[0]:
                 padroes.append(("Padrão Espelhado com Cores", f"Nova sequência em {LABELS[bloco2[0]]}", 72))
 
-    # Últimos 5
+    # Padrão últimos 5
     if len(h) >= 5:
         ultimos5 = h[:5]
         mais_freq = max(set(ultimos5), key=ultimos5.count)
@@ -68,17 +75,20 @@ def analisar_padroes(h):
 
     return padroes
 
-# Sugestão de entrada (somente com 9 ou mais resultados)
+# Sugestões de entrada (só se tiver pelo menos 9)
 st.subheader("📈 Sugestões de Entrada")
-padroes = analisar_padroes(st.session_state.historico) if len(st.session_state.historico) >= 9 else []
-if padroes:
-    padrao_mais_forte = max(padroes, key=lambda x: x[2])
-    nome, acao, confianca = padrao_mais_forte
-    st.success(f"📌 {nome} — 💡 {acao} — 🎯 Confiança: {confianca}%")
+if len(st.session_state.historico) >= 9:
+    padroes = analisar_padroes(st.session_state.historico)
+    if padroes:
+        padrao_mais_forte = max(padroes, key=lambda x: x[2])
+        nome, acao, confianca = padrao_mais_forte
+        st.success(f"📌 {nome} — 💡 {acao} — 🎯 Confiança: {confianca}%")
+    else:
+        st.info("Nenhum padrão forte detectado no momento.")
 else:
-    st.info("Nenhum padrão forte detectado no momento.")
+    st.warning("Adicione pelo menos 9 resultados para iniciar a análise.")
 
-# Inserir resultado
+# Interface de entrada
 st.subheader("🎮 Inserir Resultado")
 c1, c2, c3 = st.columns(3)
 if c1.button("🔴 Casa"):
@@ -88,16 +98,16 @@ if c2.button("🔵 Visitante"):
 if c3.button("🟡 Empate"):
     st.session_state.historico.appendleft("E")
 
-# Mostrar histórico
-st.subheader("📜 Histórico de Resultados (blocos de 9)")
+# Exibe histórico de forma organizada
+st.subheader("📜 Histórico de Resultados (linhas de 9)")
 mostrar_historico(st.session_state.historico)
 
 # Botões de controle
-b1, b2 = st.columns(2)
-if b1.button("↩️ Desfazer"):
+cl1, cl2 = st.columns(2)
+if cl1.button("↩️ Desfazer último"):
     if st.session_state.historico:
         st.session_state.historico.popleft()
-if b2.button("🧹 Limpar"):
+if cl2.button("🧹 Limpar tudo"):
     st.session_state.historico.clear()
 
 # Rodapé
