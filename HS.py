@@ -1,4 +1,7 @@
 import streamlit as st
+from streamlit.runtime.scriptrunner import RerunException
+from streamlit.runtime.scriptrunner import get_script_run_ctx
+
 import pandas as pd
 import collections
 
@@ -654,7 +657,7 @@ def clear_history():
     st.session_state.last_guarantee_pattern = "N/A"
     st.session_state.guarantee_failed = False
     st.session_state.last_suggestion_confidence = 0
-    st.experimental_rerun() # Usado aqui para forçar um reset visual completo.
+    raise RerunException(get_script_run_ctx())  # Usado aqui para forçar um reset visual completo.
 
 # --- Layout ---
 st.header("Registrar Resultado")
