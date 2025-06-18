@@ -388,35 +388,27 @@ def generate_advanced_suggestion(results, surf_analysis, color_analysis, break_p
             if "Padrão Reversão/Bloco Alternado" in pattern:
                 # Extrai as cores envolvidas no padrão
                 pattern_info_str = pattern.split('(')[1].replace(')', '').strip()
-                # Ex: "Red Blue" -> ['Red', 'Blue']
-                # Ajuste para garantir que estamos pegando as cores corretamente, ignorando emojis se houver
                 pattern_colors_raw = pattern_info_str.split(' ')
-                first_block_color = pattern_colors_raw[0].lower() # Ex: 'Red' -> 'red'
-                second_block_color = pattern_colors_raw[1].lower() # Ex: 'Blue' -> 'blue'
+                first_block_color_str = pattern_colors_raw[0].lower()
+                second_block_color_str = pattern_colors_raw[1].lower()
                 
+                # Mapeia as strings de cor para as chaves do dicionário bet_scores
+                first_block_bet_key = 'home' if first_block_color_str == 'red' else 'away' if first_block_color_str == 'blue' else 'none'
+                second_block_bet_key = 'home' if second_block_color_str == 'red' else 'away' if second_block_color_str == 'blue' else 'none'
+
                 if len(results) >= 2:
                     current_block_color = get_color(results[0])
                     prev_block_color = get_color(results[1])
                     
                     if current_block_color == prev_block_color: # Se a sequência atual ainda é do mesmo bloco
-                        if current_block_color == first_block_color and second_block_color != 'yellow':
-                            if second_block_color == 'blue': 
-                                bet_scores['away'] += 115 
-                                reasons['away'].append(f"Padrão '{pattern.split('(')[0].strip()}' altamente recorrente ({count}x). Espera-se a reversão para {second_block_color.capitalize()}.")
-                                guarantees['away'].append(pattern)
-                            elif second_block_color == 'red': 
-                                bet_scores['home'] += 115 
-                                reasons['home'].append(f"Padrão '{pattern.split('(')[0].strip()}' altamente recorrente ({count}x). Espera-se a reversão para {second_block_color.capitalize()}.")
-                                guarantees['home'].append(pattern)
-                        elif current_block_color == second_block_color and first_block_color != 'yellow':
-                            if first_block_color == 'blue': 
-                                bet_scores['away'] += 115 
-                                reasons['away'].append(f"Padrão '{pattern.split('(')[0].strip()}' altamente recorrente ({count}x). Espera-se a reversão para {first_block_color.capitalize()}.")
-                                guarantees['away'].append(pattern)
-                            elif first_block_color == 'red': 
-                                bet_scores['home'] += 115 
-                                reasons['home'].append(f"Padrão '{pattern.split('(')[0].strip()}' altamente recorrente ({count}x). Espera-se a reversão para {first_block_color.capitalize()}.")
-                                guarantees['home'].append(pattern)
+                        if current_block_color == first_block_color_str and second_block_bet_key != 'none':
+                            bet_scores[second_block_bet_key] += 115 
+                            reasons[second_block_bet_key].append(f"Padrão '{pattern.split('(')[0].strip()}' altamente recorrente ({count}x). Espera-se a reversão para {second_block_color_str.capitalize()}.")
+                            guarantees[second_block_bet_key].append(pattern)
+                        elif current_block_color == second_block_color_str and first_block_bet_key != 'none':
+                            bet_scores[first_block_bet_key] += 115 
+                            reasons[first_block_bet_key].append(f"Padrão '{pattern.split('(')[0].strip()}' altamente recorrente ({count}x). Espera-se a reversão para {first_block_color_str.capitalize()}.")
+                            guarantees[first_block_bet_key].append(pattern)
 
     # 3. Sugestão de Empate (se atrasado OU recorrente)
     # Empate Atrasado: Mais de 7 rodadas sem empate E baixa frequência
@@ -717,57 +709,4 @@ st.header("📊 Análise IA e Sugestão")
 
 suggestion_data = st.session_state.analysis_data['suggestion']
 
-if suggestion_data['bet_type'] != 'none' and suggestion_data['confidence'] > 0:
-    st.info(f"**Sugestão:** {suggestion_data['suggestion']}")
-    st.metric(label="Confiança", value=f"{suggestion_data['confidence']}%")
-    st.write(f"**Motivo:** {suggestion_data['reason']}")
-    st.write(f"**Padrão de Garantia da Sugestão:** {suggestion_data['guarantee_pattern']}")
-
-    # Adicionando um texto para o cenário de "garantia falha"
-    if suggestion_data['guarantee_pattern'] != 'Nenhum Padrão Forte':
-        if suggestion_data['bet_type'] == 'home':
-            st.write(f"Previsão: **CASA** {get_color_emoji('red')}")
-        elif suggestion_data['bet_type'] == 'away':
-            st.write(f"Previsão: **VISITANTE** {get_color_emoji('blue')}")
-        elif suggestion_data['bet_type'] == 'draw':
-            st.write(f"Previsão: **EMPATE** {get_color_emoji('yellow')}")
-
-else:
-    st.info(suggestion_data['suggestion']) # Exibe a mensagem de aguardando resultados
-
-st.markdown("---")
-
-# --- Detalhes da Análise (Para Debug/Aprofundamento) ---
-st.header("🔍 Detalhes da Análise")
-st.subheader("Frequência de Resultados (Últimos 27)")
-st.json(st.session_state.analysis_data['stats'])
-
-st.subheader("Análise de Surf (Sequências)")
-st.json(st.session_state.analysis_data['surf_analysis'])
-
-st.subheader("Contagem de Cores e Sequência Atual")
-st.json(st.session_state.analysis_data['color_analysis'])
-
-st.subheader("Padrões de Quebra e Complexos")
-if st.session_state.analysis_data['break_patterns']:
-    # Converte o dicionário em DataFrame para melhor visualização e ordenação
-    patterns_df = pd.DataFrame(st.session_state.analysis_data['break_patterns'].items(), columns=['Padrão', 'Ocorrências'])
-    patterns_df = patterns_df.sort_values(by='Ocorrências', ascending=False)
-    st.dataframe(patterns_df, hide_index=True)
-else:
-    st.info("Nenhum padrão complexo detectado ainda.")
-
-st.subheader("Probabilidade de Quebra Geral")
-st.json(st.session_state.analysis_data['break_probability'])
-
-st.subheader("Análise de Empates")
-st.json(st.session_state.analysis_data['draw_specifics'])
-
-# Informações adicionais da sessão (para debug)
-st.subheader("Variáveis de Sessão (Debug)")
-st.json({
-    'last_suggested_bet_type': st.session_state.last_suggested_bet_type,
-    'last_guarantee_pattern': st.session_state.last_guarantee_pattern,
-    'guarantee_failed': st.session_state.guarantee_failed,
-    'last_suggestion_confidence': st.session_state.last_suggestion_confidence
-})
+if suggestion_data['bet_type'] != 'none' and suggestion_data['confidence'] >
