@@ -331,8 +331,8 @@ def generate_advanced_suggestion(results, surf_analysis, color_analysis, break_p
         guarantees['away'].append(f"Surf Max Quebra: {last_result_color.capitalize()}")
     elif last_result_color == 'blue' and surf_analysis['max_away_sequence'] > 0 and current_streak >= surf_analysis['max_away_sequence'] and current_streak >= 3:
         bet_scores['home'] += 150
-        reasons['home'].append(f"Sequência atual de Azul ({current_streak}x) atingiu ou superou o máximo histórico de surf ({surf_analysis['max_away_sequence']}x). Alta probabilidade de quebra para Vermelho.")
-        guarantees['home'].append(f"Surf Max Quebra: {last_result_color.capitalize()}")
+        reasons['away'].append(f"Sequência atual de Azul ({current_streak}x) atingiu ou superou o máximo histórico de surf ({surf_analysis['max_away_sequence']}x). Alta probabilidade de quebra para Vermelho.")
+guarantees['away'].append(f"Surf Max Quebra: {last_result_color.capitalize()}")
     elif last_result_color == 'yellow' and surf_analysis['max_draw_sequence'] > 0 and current_streak >= surf_analysis['max_draw_sequence'] and current_streak >= 2:
         # Se empate atingiu o máximo, pode quebrar para qualquer lado.
         bet_scores['home'] += 100 
