@@ -13,11 +13,11 @@ LABELS = {"C": "Casa", "V": "Visitante", "E": "Empate"}
 if "historico" not in st.session_state:
     st.session_state.historico = deque(maxlen=200)
 
-# Função para mostrar o histórico em blocos de 9 (linhas horizontais)
+# Função para mostrar o histórico em blocos de 9 (mais recente em cima, esquerda para direita)
 def mostrar_historico(historico):
     h = list(historico)
     blocos = [h[i:i+9] for i in range(0, len(h), 9)]
-    blocos = blocos[::-1]  # Mostrar os blocos mais recentes primeiro
+    blocos = blocos[::-1]  # linha de cima = mais recente
 
     for linha in blocos:
         st.markdown(
