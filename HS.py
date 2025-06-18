@@ -30,16 +30,7 @@ def get_color_emoji(color):
 
 def get_result_emoji(result_type):
     """Retorna o emoji correspondente ao tipo de resultado. Agora retorna uma string vazia para remover os ícones."""
-    # Alterado para retornar string vazia, removendo 🏠, ✈️, 🤝 do histórico.
     return ''
-    # Código anterior (com emojis):
-    # if result_type == 'home':
-    #     return '🏠'
-    # elif result_type == 'away':
-    #     return '✈️'
-    # elif result_type == 'draw':
-    #     return '🤝'
-    # return ''
 
 # --- Funções de Análise ---
 
@@ -152,7 +143,7 @@ def find_complex_patterns(results):
 
         # 1. Quebra Simples
         if color1 != color2:
-            patterns[f"Quebra Simples ({color1.capitalize()}{get_color_emoji(color1)} para {color2.capitalize()}{get_color_emoji(color2)})"] += 1
+            patterns[f"Quebra Simples ({color1.capitalize()} para {color2.capitalize()})"] += 1
 
         # Verificar padrões que envolvem 3 ou mais resultados
         if i < len(colors) - 2:
@@ -160,21 +151,21 @@ def find_complex_patterns(results):
             
             # 2. Padrões 2x1 (Ex: R R B)
             if color1 == color2 and color1 != color3:
-                patterns[f"2x1 ({color1.capitalize()} {get_color_emoji(color1)} {color3.capitalize()}{get_color_emoji(color3)})"] += 1
+                patterns[f"2x1 ({color1.capitalize()} para {color3.capitalize()})"] += 1
             
             # 3. Zig-Zag / Padrão Alternado (Ex: R B R)
             if color1 != color2 and color2 != color3 and color1 == color3:
-                patterns[f"Zig-Zag / Alternado ({color1.capitalize()}{get_color_emoji(color1)} {color2.capitalize()}{get_color_emoji(color2)} {color3.capitalize()}{get_color_emoji(color3)})"] += 1
+                patterns[f"Zig-Zag / Alternado ({color1.capitalize()} {color2.capitalize()} {color3.capitalize()})"] += 1
 
             # 4. Alternância com Empate no Meio (X Draw Y - Ex: R Y B)
             if color2 == 'yellow' and color1 != 'yellow' and color3 != 'yellow' and color1 != color3:
-                patterns[f"Alternância c/ Empate no Meio ({color1.capitalize()}{get_color_emoji(color1)} Empate{get_color_emoji('yellow')} {color3.capitalize()}{get_color_emoji(color3)})"] += 1
+                patterns[f"Alternância c/ Empate no Meio ({color1.capitalize()} Empate {color3.capitalize()})"] += 1
 
             # 5. Padrão Onda 1-2-1 (Ex: R B B R) - variação de espelho ou zig-zag
             if i < len(colors) - 3:
                 color4 = colors[i+3]
                 if color1 != color2 and color2 == color3 and color3 != color4 and color1 == color4:
-                    patterns[f"Padrão Onda 1-2-1 ({color1.capitalize()}{get_color_emoji(color1)} {color2.capitalize()}{get_color_emoji(color2)} {color3.capitalize()}{get_color_emoji(color3)} {color4.capitalize()}{get_color_emoji(color4)})"] += 1
+                    patterns[f"Padrão Onda 1-2-1 ({color1.capitalize()} {color2.capitalize()} {color3.capitalize()} {color4.capitalize()})"] += 1
 
         if i < len(colors) - 3:
             color3 = colors[i+2]
@@ -182,15 +173,15 @@ def find_complex_patterns(results):
 
             # 6. Padrões 3x1 (Ex: R R R B)
             if color1 == color2 and color2 == color3 and color1 != color4:
-                patterns[f"3x1 ({color1.capitalize()} {get_color_emoji(color1)} {color4.capitalize()}{get_color_emoji(color4)})"] += 1
+                patterns[f"3x1 ({color1.capitalize()} para {color4.capitalize()})"] += 1
             
             # 7. Padrões 2x2 (Ex: R R B B)
             if color1 == color2 and color3 == color4 and color1 != color3:
-                patterns[f"2x2 ({color1.capitalize()} {get_color_emoji(color1)} {color3.capitalize()}{get_color_emoji(color3)})"] += 1
+                patterns[f"2x2 ({color1.capitalize()} para {color3.capitalize()})"] += 1
             
             # 8. Padrão de Espelho (Ex: R B B R)
             if color1 != color2 and color2 == color3 and color1 == color4:
-                patterns[f"Padrão Espelho ({color1.capitalize()}{get_color_emoji(color1)} {color2.capitalize()}{get_color_emoji(color2)} {color3.capitalize()}{get_color_emoji(color3)} {color4.capitalize()}{get_color_emoji(color4)})"] += 1
+                patterns[f"Padrão Espelho ({color1.capitalize()} {color2.capitalize()} {color3.capitalize()} {color4.capitalize()})"] += 1
 
         if i < len(colors) - 5:
             color3 = colors[i+2]
@@ -200,12 +191,12 @@ def find_complex_patterns(results):
 
             # 9. Padrões 3x3 (Ex: R R R B B B)
             if color1 == color2 and color2 == color3 and color4 == color5 and color5 == color6 and color1 != color4:
-                patterns[f"3x3 ({color1.capitalize()} {get_color_emoji(color1)} {color4.capitalize()}{get_color_emoji(color4)})"] += 1
+                patterns[f"3x3 ({color1.capitalize()} para {color4.capitalize()})"] += 1
 
     # 10. Duplas Repetidas (Ex: R R, B B, Y Y) - Contagem de ocorrências de duplas
     for i in range(len(colors) - 1):
         if colors[i] == colors[i+1]:
-            patterns[f"Dupla Repetida ({colors[i].capitalize()} {get_color_emoji(colors[i])})"] += 1
+            patterns[f"Dupla Repetida ({colors[i].capitalize()})"] += 1
             
     # Padrão de Reversão / Alternância de Blocos (Ex: RR BB RR BB)
     block_pattern_keys = []
@@ -226,9 +217,9 @@ def find_complex_patterns(results):
                            all(c == block4_colors[0] for c in block4_colors) and \
                            block1_colors[0] == block3_colors[0] and \
                            block2_colors[0] == block4_colors[0]:
-                                block_pattern_keys.append(f"Padrão Reversão/Bloco Alternado {block_size}x{block_size} ({block1_colors[0].capitalize()}{get_color_emoji(block1_colors[0])} {block2_colors[0].capitalize()}{get_color_emoji(block2_colors[0])})")
+                                block_pattern_keys.append(f"Padrão Reversão/Bloco Alternado {block_size}x{block_size} ({block1_colors[0].capitalize()} {block2_colors[0].capitalize()})")
                     else:
-                         block_pattern_keys.append(f"Padrão Reversão/Bloco {block_size}x{block_size} ({block1_colors[0].capitalize()}{get_color_emoji(block1_colors[0])} {block2_colors[0].capitalize()}{get_color_emoji(block2_colors[0])})")
+                         block_pattern_keys.append(f"Padrão Reversão/Bloco {block_size}x{block_size} ({block1_colors[0].capitalize()} {block2_colors[0].capitalize()})")
     
     for key in block_pattern_keys:
         patterns[key] += 1
@@ -254,7 +245,7 @@ def analyze_break_probability(results):
 
     last_break_type = ""
     if len(results) >= 2 and get_color(results[0]) != get_color(results[1]):
-        last_break_type = f"Quebrou de {get_color(results[1]).capitalize()} {get_color_emoji(get_color(results[1]))} para {get_color(results[0]).capitalize()} {get_color_emoji(get_color(results[0]))}"
+        last_break_type = f"Quebrou de {get_color(results[1]).capitalize()} para {get_color(results[0]).capitalize()}"
     
     return {
         'break_chance': round(break_chance, 2),
@@ -282,15 +273,15 @@ def analyze_draw_specifics(results):
         color2 = get_color(relevant_results[i+1])
 
         if color2 == 'yellow' and color1 != 'yellow':
-            draw_patterns_found[f"Quebra para Empate ({color1.capitalize()}{get_color_emoji(color1)} para Empate{get_color_emoji('yellow')})"] += 1
+            draw_patterns_found[f"Quebra para Empate ({color1.capitalize()} para Empate)"] += 1
         
         if i < len(relevant_results) - 2:
             color3 = get_color(relevant_results[i+2])
             if color3 == 'yellow':
                 if color1 == 'red' and color2 == 'blue':
-                    draw_patterns_found["Red-Blue-Draw (🔴🔵🟡)"] += 1
+                    draw_patterns_found["Red-Blue-Draw"] += 1
                 elif color1 == 'blue' and color2 == 'red':
-                    draw_patterns_found["Blue-Red-Draw (🔵🔴🟡)"] += 1
+                    draw_patterns_found["Blue-Red-Draw"] += 1
 
     # Detecção de Empate Recorrente (intervalos curtos)
     draw_indices = [i for i, r in enumerate(relevant_results) if r == 'draw']
@@ -348,31 +339,34 @@ def generate_advanced_suggestion(results, surf_analysis, color_analysis, break_p
 
     # 2. Padrões 2x1 e 3x1 altamente recorrentes (Indica quebra)
     for pattern, count in break_patterns.items():
+        # Simplificação do nome do padrão para uso na lógica
+        simple_pattern_name = pattern.split('(')[0].strip()
+
         if count >= 3:
-            if "2x1 (Red 🔴 Blue 🔵)" in pattern and last_result_color == 'red' and current_streak == 2:
+            if "2x1 (Red para Blue)" in pattern and last_result_color == 'red' and current_streak == 2:
                 bet_scores['away'] += 100
-                reasons['away'].append(f"Padrão 2x1 (🔴🔴🔵) altamente recorrente ({count}x).")
+                reasons['away'].append(f"Padrão '{simple_pattern_name}' altamente recorrente ({count}x).")
                 guarantees['away'].append(pattern)
-            elif "2x1 (Blue 🔵 Red 🔴)" in pattern and last_result_color == 'blue' and current_streak == 2:
+            elif "2x1 (Blue para Red)" in pattern and last_result_color == 'blue' and current_streak == 2:
                 bet_scores['home'] += 100
-                reasons['home'].append(f"Padrão 2x1 (🔵🔵🔴) altamente recorrente ({count}x).")
+                reasons['home'].append(f"Padrão '{simple_pattern_name}' altamente recorrente ({count}x).")
                 guarantees['home'].append(pattern)
-            elif "3x1 (Red 🔴 Blue 🔵)" in pattern and last_result_color == 'red' and current_streak == 3:
+            elif "3x1 (Red para Blue)" in pattern and last_result_color == 'red' and current_streak == 3:
                 bet_scores['away'] += 110
-                reasons['away'].append(f"Padrão 3x1 (🔴🔴🔴🔵) altamente recorrente ({count}x).")
+                reasons['away'].append(f"Padrão '{simple_pattern_name}' altamente recorrente ({count}x).")
                 guarantees['away'].append(pattern)
-            elif "3x1 (Blue 🔵 Red 🔴)" in pattern and last_result_color == 'blue' and current_streak == 3:
+            elif "3x1 (Blue para Red)" in pattern and last_result_color == 'blue' and current_streak == 3:
                 bet_scores['home'] += 110
-                reasons['home'].append(f"Padrão 3x1 (🔵🔵🔵🔴) altamente recorrente ({count}x).")
+                reasons['home'].append(f"Padrão '{simple_pattern_name}' altamente recorrente ({count}x).")
                 guarantees['home'].append(pattern)
             # Novos padrões 2x2, 3x3 para quebra
-            if "2x2 (Red 🔴 Blue 🔵)" in pattern and len(results) >= 2 and get_color(results[0]) == 'red' and get_color(results[1]) == 'red':
+            if "2x2 (Red para Blue)" in pattern and len(results) >= 2 and get_color(results[0]) == 'red' and get_color(results[1]) == 'red':
                 bet_scores['away'] += 90 
-                reasons['away'].append(f"Padrão 2x2 (🔴🔴🔵🔵) recorrente ({count}x).")
+                reasons['away'].append(f"Padrão '{simple_pattern_name}' recorrente ({count}x).")
                 guarantees['away'].append(pattern)
-            if "2x2 (Blue 🔵 Red 🔴)" in pattern and len(results) >= 2 and get_color(results[0]) == 'blue' and get_color(results[1]) == 'blue':
+            if "2x2 (Blue para Red)" in pattern and len(results) >= 2 and get_color(results[0]) == 'blue' and get_color(results[1]) == 'blue':
                 bet_scores['home'] += 90
-                reasons['home'].append(f"Padrão 2x2 (🔵🔵🔴🔴) recorrente ({count}x).")
+                reasons['home'].append(f"Padrão '{simple_pattern_name}' recorrente ({count}x).")
                 guarantees['home'].append(pattern)
             # Padrão Reversão/Bloco Alternado
             if "Padrão Reversão/Bloco Alternado" in pattern:
@@ -387,11 +381,11 @@ def generate_advanced_suggestion(results, surf_analysis, color_analysis, break_p
                     if current_block_color == prev_block_color:
                         if current_block_color == first_block_color and second_block_color != 'yellow':
                             bet_scores[second_block_color] += 105
-                            reasons[second_block_color].append(f"Padrão de Reversão de Blocos ({first_block_color.capitalize()} {second_block_color.capitalize()}) altamente recorrente ({count}x).")
+                            reasons[second_block_color].append(f"Padrão '{simple_pattern_name}' altamente recorrente ({count}x).")
                             guarantees[second_block_color].append(pattern)
                         elif current_block_color == second_block_color and first_block_color != 'yellow':
                             bet_scores[first_block_color] += 105
-                            reasons[first_block_color].append(f"Padrão de Reversão de Blocos ({second_block_color.capitalize()} {first_block_color.capitalize()}) altamente recorrente ({count}x).")
+                            reasons[first_block_color].append(f"Padrão '{simple_pattern_name}' altamente recorrente ({count}x).")
                             guarantees[first_block_color].append(pattern)
 
     # 3. Sugestão de Empate (se atrasado OU recorrente)
@@ -402,15 +396,15 @@ def generate_advanced_suggestion(results, surf_analysis, color_analysis, break_p
     
     if len(results) >= 2:
         if get_color(results[0]) == 'away' and get_color(results[1]) == 'home':
-            if "Red-Blue-Draw (🔴🔵🟡)" in draw_specifics['draw_patterns']:
+            if "Red-Blue-Draw" in draw_specifics['draw_patterns']:
                 bet_scores['draw'] += 95
-                reasons['draw'].append(f"Padrão 🔴🔵🟡 detectado e recorrente.")
-                guarantees['draw'].append("Padrão 🔴🔵🟡")
+                reasons['draw'].append(f"Padrão 'Red-Blue-Draw' detectado e recorrente.")
+                guarantees['draw'].append("Padrão Red-Blue-Draw")
         elif get_color(results[0]) == 'home' and get_color(results[1]) == 'away':
-            if "Blue-Red-Draw (🔵🔴🟡)" in draw_specifics['draw_patterns']:
+            if "Blue-Red-Draw" in draw_specifics['draw_patterns']:
                 bet_scores['draw'] += 95
-                reasons['draw'].append(f"Padrão 🔵🔴🟡 detectado e recorrente.")
-                guarantees['draw'].append("Padrão 🔵🔴🟡")
+                reasons['draw'].append(f"Padrão 'Blue-Red-Draw' detectado e recorrente.")
+                guarantees['draw'].append("Padrão Blue-Red-Draw")
 
     # 4. Empate Recorrente (intervalos curtos)
     if draw_specifics['recurrent_draw'] and draw_specifics['time_since_last_draw'] <= 3: 
@@ -420,22 +414,24 @@ def generate_advanced_suggestion(results, surf_analysis, color_analysis, break_p
 
     # 5. Zig-Zag / Padrões Alternados
     for pattern, count in break_patterns.items():
+        simple_pattern_name = pattern.split('(')[0].strip()
         if count >= 3:
             if "Zig-Zag / Alternado" in pattern:
                 if len(results) >= 2 and get_color(results[0]) == 'blue' and get_color(results[1]) == 'red':
                     bet_scores['home'] += 80
-                    reasons['home'].append(f"Padrão Zig-Zag (🔵🔴...) recorrente ({count}x).")
+                    reasons['home'].append(f"Padrão '{simple_pattern_name}' recorrente ({count}x).")
                     guarantees['home'].append(pattern)
                 elif len(results) >= 2 and get_color(results[0]) == 'red' and get_color(results[1]) == 'blue':
                     bet_scores['away'] += 80
-                    reasons['away'].append(f"Padrão Zig-Zag (🔴🔵...) recorrente ({count}x).")
+                    reasons['away'].append(f"Padrão '{simple_pattern_name}' recorrente ({count}x).")
                     guarantees['away'].append(pattern)
             
             # Padrão de Espelho
             if "Padrão Espelho" in pattern and len(results) >= 3:
                 pattern_parts = pattern.split('(')[1].strip(')').split(' ')
+                # As cores aqui já estão em minúsculas
                 expected_first_color = pattern_parts[0].lower()
-                expected_second_color = pattern_parts[2].lower()
+                expected_second_color = pattern_parts[1].lower() # Corrigido para pegar a segunda cor do padrão (B)
                 
                 if get_color(results[0]) == expected_second_color and \
                    get_color(results[1]) == expected_second_color and \
@@ -443,7 +439,7 @@ def generate_advanced_suggestion(results, surf_analysis, color_analysis, break_p
                    
                     if expected_first_color != 'yellow':
                         bet_scores[expected_first_color] += 85
-                        reasons[expected_first_color].append(f"Padrão Espelho ({pattern_parts[0]} {pattern_parts[1]} {pattern_parts[2]} {pattern_parts[3]}) recorrente ({count}x). Espera-se o retorno ao início do espelho.")
+                        reasons[expected_first_color].append(f"Padrão '{simple_pattern_name}' recorrente ({count}x). Espera-se o retorno ao início do espelho.")
                         guarantees[expected_first_color].append(pattern)
 
 
@@ -625,7 +621,7 @@ st.header("Registrar Resultado")
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    # Apenas os botões de registro ainda manterão o ícone original para clareza da ação
+    # Os botões de registro ainda manterão o ícone original para clareza da ação
     if st.button(f"CASA {get_color_emoji('red')} 🏠", key="btn_home", use_container_width=True):
         add_result('home')
 with col2:
@@ -651,9 +647,9 @@ if st.session_state.results:
         line_emojis = emojis_history_strings[i : i + EMOJIS_PER_ROW]
         history_lines.append(" ".join(line_emojis)) # Junta os emojis com espaço para uma única linha
     
-    # Exibir cada linha de emojis
+    # Exibir cada linha de emojis (TAMANHO DA FONTE AJUSTADO PARA 1.2EM)
     for line in history_lines:
-        st.markdown(f"<p style='white-space: nowrap; font-size: 2em;'>{line}</p>", unsafe_allow_html=True)
+        st.markdown(f"<p style='white-space: nowrap; font-size: 1.2em;'>{line}</p>", unsafe_allow_html=True) # Alterado de 2em para 1.2em
     
     st.markdown("---")
     if st.button("Limpar Histórico Completo", type="secondary", key="btn_clear_history_top"):
@@ -718,6 +714,7 @@ with col_break:
     patterns = st.session_state.analysis_data['break_patterns']
     if patterns:
         for pattern, count in patterns.items():
+            # Exibe apenas o nome do padrão e a contagem
             st.write(f"- {pattern}: {count}x")
     else:
         st.write(f"Nenhum padrão complexo identificado nos últimos {NUM_RECENT_RESULTS_FOR_ANALYSIS} resultados.")
@@ -743,6 +740,7 @@ with col_draw_analysis:
     st.subheader("Padrões de Empate Históricos")
     if draw_data['draw_patterns']:
         for pattern, count in draw_data['draw_patterns'].items():
+            # Exibe apenas o nome do padrão e a contagem
             st.write(f"- {pattern}: {count}x")
     else:
         st.write("Nenhum padrão de empate identificado ainda.")
