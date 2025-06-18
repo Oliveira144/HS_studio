@@ -29,14 +29,17 @@ def get_color_emoji(color):
     return ''
 
 def get_result_emoji(result_type):
-    """Retorna o emoji correspondente ao tipo de resultado."""
-    if result_type == 'home':
-        return '🏠'
-    elif result_type == 'away':
-        return '✈️'
-    elif result_type == 'draw':
-        return '🤝'
+    """Retorna o emoji correspondente ao tipo de resultado. Agora retorna uma string vazia para remover os ícones."""
+    # Alterado para retornar string vazia, removendo 🏠, ✈️, 🤝 do histórico.
     return ''
+    # Código anterior (com emojis):
+    # if result_type == 'home':
+    #     return '🏠'
+    # elif result_type == 'away':
+    #     return '✈️'
+    # elif result_type == 'draw':
+    #     return '🤝'
+    # return ''
 
 # --- Funções de Análise ---
 
@@ -477,12 +480,14 @@ def generate_advanced_suggestion(results, surf_analysis, color_analysis, break_p
     if best_bet_type != 'none' and max_score > 0:
         final_confidence = min(100, max_score) # Limita a confiança a 100%
         
+        # Aqui, a sugestão ainda mostra os emojis de casa/visitante/empate,
+        # pois não queremos removê-los do texto principal da sugestão.
         if best_bet_type == 'home':
-            final_suggestion = f"APOSTAR em **CASA** {get_color_emoji('red')} {get_result_emoji('home')}"
+            final_suggestion = f"APOSTAR em **CASA** {get_color_emoji('red')} 🏠"
         elif best_bet_type == 'away':
-            final_suggestion = f"APOSTAR em **VISITANTE** {get_color_emoji('blue')} {get_result_emoji('away')}"
+            final_suggestion = f"APOSTAR em **VISITANTE** {get_color_emoji('blue')} ✈️"
         elif best_bet_type == 'draw':
-            final_suggestion = f"APOSTAR em **EMPATE** {get_color_emoji('yellow')} {get_result_emoji('draw')}"
+            final_suggestion = f"APOSTAR em **EMPATE** {get_color_emoji('yellow')} 🤝"
         
         # Constrói as strings de razão e garantia
         final_reason = ". ".join(sorted(list(set(reasons[best_bet_type]))))
@@ -620,13 +625,14 @@ st.header("Registrar Resultado")
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    if st.button(f"CASA {get_color_emoji('red')} {get_result_emoji('home')}", key="btn_home", use_container_width=True):
+    # Apenas os botões de registro ainda manterão o ícone original para clareza da ação
+    if st.button(f"CASA {get_color_emoji('red')} 🏠", key="btn_home", use_container_width=True):
         add_result('home')
 with col2:
-    if st.button(f"VISITANTE {get_color_emoji('blue')} {get_result_emoji('away')}", key="btn_away", use_container_width=True):
+    if st.button(f"VISITANTE {get_color_emoji('blue')} ✈️", key="btn_away", use_container_width=True):
         add_result('away')
 with col3:
-    if st.button(f"EMPATE {get_color_emoji('yellow')} {get_result_emoji('draw')}", key="btn_draw", use_container_width=True):
+    if st.button(f"EMPATE {get_color_emoji('yellow')} 🤝", key="btn_draw", use_container_width=True):
         add_result('draw')
 
 st.markdown("---")
@@ -636,8 +642,8 @@ st.header(f"Histórico dos Últimos {NUM_HISTORY_TO_DISPLAY} Resultados")
 if st.session_state.results:
     history_to_display = st.session_state.results[:NUM_HISTORY_TO_DISPLAY]
     
-    # Criar uma lista de strings de emojis
-    emojis_history_strings = [f"{get_result_emoji(r)}{get_color_emoji(get_color(r))}" for r in history_to_display]
+    # Criar uma lista de strings de emojis (agora só as bolinhas)
+    emojis_history_strings = [f"{get_color_emoji(get_color(r))}" for r in history_to_display]
     
     # Gerar as linhas de emojis como strings de markdown
     history_lines = []
@@ -742,4 +748,3 @@ with col_draw_analysis:
         st.write("Nenhum padrão de empate identificado ainda.")
 
 st.markdown("---")
-
