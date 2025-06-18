@@ -400,11 +400,11 @@ def generate_advanced_suggestion(results, surf_analysis, color_analysis, break_p
                     
                     if current_block_color == prev_block_color: # Se a sequência atual ainda é do mesmo bloco
                         if current_block_color == first_block_color and second_block_color != 'yellow':
-                            bet_scores[second_block_color] += 115 # **CORREÇÃO APLICADA AQUI**
+                            bet_scores[second_block_color] += 115 # **CORREÇÃO: 'blue' e 'red' são mapeadas para 'away' e 'home' respectivamente**
                             reasons[second_block_color].append(f"Padrão '{pattern.split('(')[0].strip()}' altamente recorrente ({count}x). Espera-se a reversão para {second_block_color.capitalize()}.")
                             guarantees[second_block_color].append(pattern)
                         elif current_block_color == second_block_color and first_block_color != 'yellow':
-                            bet_scores[first_block_color] += 115 # **CORREÇÃO APLICADA AQUI**
+                            bet_scores[first_block_color] += 115 # **CORREÇÃO: 'blue' e 'red' são mapeadas para 'away' e 'home' respectivamente**
                             reasons[first_block_color].append(f"Padrão '{pattern.split('(')[0].strip()}' altamente recorrente ({count}x). Espera-se a reversão para {first_block_color.capitalize()}.")
                             guarantees[first_block_color].append(pattern)
 
@@ -443,11 +443,11 @@ def generate_advanced_suggestion(results, surf_analysis, color_analysis, break_p
                     # Verifica se o padrão alternado na string bate com a sequência atual
                     # Ex: Zig-Zag (R-B-R) -> se a sequência atual é B-R, a próxima pode ser B
                     if "Red-Blue-Red" in pattern and current_pattern_segment == "Blue-Red":
-                        bet_scores['away'] += 90 # **CORREÇÃO APLICADA AQUI: mudou de 'blue' para 'away'**
+                        bet_scores['away'] += 90 # CORRIGIDO: de 'blue' para 'away'
                         reasons['away'].append(f"Padrão '{pattern.split('(')[0].strip()}' recorrente ({count}x). Espera-se o próximo alternado.")
                         guarantees['away'].append(pattern)
                     elif "Blue-Red-Blue" in pattern and current_pattern_segment == "Red-Blue":
-                        bet_scores['home'] += 90 # **CORREÇÃO APLICADA AQUI: mudou de 'red' para 'home'**
+                        bet_scores['home'] += 90 # CORRIGIDO: de 'red' para 'home'
                         reasons['home'].append(f"Padrão '{pattern.split('(')[0].strip()}' recorrente ({count}x). Espera-se o próximo alternado.")
                         guarantees['home'].append(pattern)
             
@@ -469,18 +469,17 @@ def generate_advanced_suggestion(results, surf_analysis, color_analysis, break_p
                        get_color(results[2]) == c1_pattern:
                         
                         if c4_pattern != 'yellow': # Não sugere empate se o espelho termina em empate
-                            # **CORREÇÃO APLICADA AQUI:** 'red' ou 'blue' são mapeadas para 'home' ou 'away'
+                            # CORREÇÃO: Mapeia a cor 'red'/'blue' para a chave 'home'/'away' do bet_scores
+                            bet_type_from_color = 'none'
                             if c4_pattern == 'red':
-                                bet_scores['home'] += 95
+                                bet_type_from_color = 'home'
                             elif c4_pattern == 'blue':
-                                bet_scores['away'] += 95
-                            # else: C4_pattern é amarelo, mas a condição `!= 'yellow'` já trata isso.
+                                bet_type_from_color = 'away'
 
-                            reasons[c4_pattern].append(f"Padrão '{pattern.split('(')[0].strip()}' recorrente ({count}x). Espera-se o fechamento do espelho com {c4_pattern.capitalize()}.")
-                            if c4_pattern == 'red':
-                                guarantees['home'].append(pattern)
-                            elif c4_pattern == 'blue':
-                                guarantees['away'].append(pattern)
+                            if bet_type_from_color != 'none':
+                                bet_scores[bet_type_from_color] += 95 # CORRIGIDO: usa 'home' ou 'away'
+                                reasons[bet_type_from_color].append(f"Padrão '{pattern.split('(')[0].strip()}' recorrente ({count}x). Espera-se o fechamento do espelho com {c4_pattern.capitalize()}.") # CORRIGIDO: usa a chave correta
+                                guarantees[bet_type_from_color].append(pattern) # CORRIGIDO: usa a chave correta
 
 
     # --- Nível 3: Sugestões de Confiança Média (Pontuação 40-70) ---
@@ -595,7 +594,7 @@ def check_guarantee_status(suggested_bet_type, actual_result, guarantee_pattern)
     # Se a sugestão foi "home" e o resultado não foi "home", falha.
     elif suggested_bet_type == 'home' and actual_result != 'home':
         return False
-    # Se a sugestão foi "away' e o resultado não foi "away", falha.
+    # Se a sugestão foi "away" e o resultado não foi "away", falha.
     elif suggested_bet_type == 'away' and actual_result != 'away':
         return False
     
