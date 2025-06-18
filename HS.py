@@ -450,7 +450,7 @@ def generate_advanced_suggestion(results, surf_analysis, color_analysis, break_p
                         reasons['blue'].append(f"Padrão '{pattern.split('(')[0].strip()}' recorrente ({count}x). Espera-se o próximo alternado.")
                         guarantees['blue'].append(pattern)
                     elif "Blue-Red-Blue" in pattern and current_pattern_segment == "Red-Blue":
-                        bet_scores['red'] += 90 # Espera-se que volte para vermelho
+                        bet_scores['home'] += 90 # Espera-se que volte para vermelho
                         reasons['red'].append(f"Padrão '{pattern.split('(')[0].strip()}' recorrente ({count}x). Espera-se o próximo alternado.")
                         guarantees['red'].append(pattern)
             
