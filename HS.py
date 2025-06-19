@@ -1,7 +1,4 @@
 import streamlit as st
-from streamlit.runtime.scriptrunner import RerunException
-from streamlit.runtime.scriptrunner import get_script_run_ctx
-
 import pandas as pd
 import collections
 
@@ -132,8 +129,7 @@ def analyze_colors(results):
 def find_complex_patterns(results):
     """
     Identifica padrões de quebra e padrões específicos (2x2, 3x3, 3x1, 2x1, etc.)
-    nos últimos N resultados, incluindo os novos padrões.
-    Os nomes dos padrões agora são concisos, sem exemplos ou emojis.
+    nos últimos N resultados, incluindo os novos padrões. Os nomes dos padrões agora são concisos, sem exemplos ou emojis.
     """
     patterns = collections.defaultdict(int)
     relevant_results = results[:NUM_RECENT_RESULTS_FOR_ANALYSIS]
@@ -221,7 +217,7 @@ def find_complex_patterns(results):
                            all(c == block4_colors[0] for c in block4_colors) and \
                            block1_colors[0] == block3_colors[0] and \
                            block2_colors[0] == block4_colors[0]:
-                                block_pattern_keys.append(f"Padrão Reversão/Bloco Alternado {block_size}x{block_size} ({block1_colors[0].capitalize()} {block2_colors[0].capitalize()})")
+                            block_pattern_keys.append(f"Padrão Reversão/Bloco Alternado {block_size}x{block_size} ({block1_colors[0].capitalize()} {block2_colors[0].capitalize()})")
                     else:
                          block_pattern_keys.append(f"Padrão Reversão/Bloco {block_size}x{block_size} ({block1_colors[0].capitalize()} {block2_colors[0].capitalize()})")
     
@@ -307,8 +303,7 @@ def analyze_draw_specifics(results):
 def generate_advanced_suggestion(results, surf_analysis, color_analysis, break_patterns, break_probability, draw_specifics):
     """
     Gera uma sugestão de aposta baseada em múltiplas análises usando um sistema de pontuação,
-    com foco em segurança e incorporando os novos padrões.
-    Prioriza sugestões mais fortes e evita conflitos.
+    com foco em segurança e incorporando os novos padrões. Prioriza sugestões mais fortes e evita conflitos.
     """
     if not results or len(results) < MIN_RESULTS_FOR_SUGGESTION: 
         return {'suggestion': f'Aguardando no mínimo {MIN_RESULTS_FOR_SUGGESTION} resultados para análise detalhada.', 'confidence': 0, 'reason': '', 'guarantee_pattern': 'N/A', 'bet_type': 'none'}
@@ -331,8 +326,8 @@ def generate_advanced_suggestion(results, surf_analysis, color_analysis, break_p
         guarantees['away'].append(f"Surf Max Quebra: {last_result_color.capitalize()}")
     elif last_result_color == 'blue' and surf_analysis['max_away_sequence'] > 0 and current_streak >= surf_analysis['max_away_sequence'] and current_streak >= 3:
         bet_scores['home'] += 150
-        reasons['away'].append(f"Sequência atual de Azul ({current_streak}x) atingiu ou superou o máximo histórico de surf ({surf_analysis['max_away_sequence']}x). Alta probabilidade de quebra para Vermelho.")
-guarantees['away'].append(f"Surf Max Quebra: {last_result_color.capitalize()}")
+        reasons['home'].append(f"Sequência atual de Azul ({current_streak}x) atingiu ou superou o máximo histórico de surf ({surf_analysis['max_away_sequence']}x). Alta probabilidade de quebra para Vermelho.")
+        guarantees['home'].append(f"Surf Max Quebra: {last_result_color.capitalize()}")
     elif last_result_color == 'yellow' and surf_analysis['max_draw_sequence'] > 0 and current_streak >= surf_analysis['max_draw_sequence'] and current_streak >= 2:
         # Se empate atingiu o máximo, pode quebrar para qualquer lado.
         bet_scores['home'] += 100 
@@ -446,13 +441,13 @@ guarantees['away'].append(f"Surf Max Quebra: {last_result_color.capitalize()}")
                     # Verifica se o padrão alternado na string bate com a sequência atual
                     # Ex: Zig-Zag (R-B-R) -> se a sequência atual é B-R, a próxima pode ser B
                     if "Red-Blue-Red" in pattern and current_pattern_segment == "Blue-Red":
-                        bet_scores['blue'] += 90 # Espera-se que volte para azul
-                        reasons['blue'].append(f"Padrão '{pattern.split('(')[0].strip()}' recorrente ({count}x). Espera-se o próximo alternado.")
-                        guarantees['blue'].append(pattern)
+                        bet_scores['away'] += 90 # Espera-se que volte para azul
+                        reasons['away'].append(f"Padrão '{pattern.split('(')[0].strip()}' recorrente ({count}x). Espera-se o próximo alternado.")
+                        guarantees['away'].append(pattern)
                     elif "Blue-Red-Blue" in pattern and current_pattern_segment == "Red-Blue":
                         bet_scores['home'] += 90 # Espera-se que volte para vermelho
-                        reasons['red'].append(f"Padrão '{pattern.split('(')[0].strip()}' recorrente ({count}x). Espera-se o próximo alternado.")
-                        guarantees['red'].append(pattern)
+                        reasons['home'].append(f"Padrão '{pattern.split('(')[0].strip()}' recorrente ({count}x). Espera-se o próximo alternado.")
+                        guarantees['home'].append(pattern)
             
             # Padrão de Espelho
             if "Padrão Espelho" in pattern and len(results) >= 3:
@@ -472,9 +467,12 @@ guarantees['away'].append(f"Surf Max Quebra: {last_result_color.capitalize()}")
                        get_color(results[2]) == c1_pattern:
                         
                         if c4_pattern != 'yellow': # Não sugere empate se o espelho termina em empate
-                            bet_scores[c4_pattern] += 95 # Aposta na cor que completa o espelho
-                            reasons[c4_pattern].append(f"Padrão '{pattern.split('(')[0].strip()}' recorrente ({count}x). Espera-se o fechamento do espelho com {c4_pattern.capitalize()}.")
-                            guarantees[c4_pattern].append(pattern)
+                            # Aposta na cor que completa o espelho.
+                            # Se c4_pattern é 'red', a aposta é 'home'. Se é 'blue', a aposta é 'away'.
+                            bet_target = 'home' if c4_pattern == 'red' else 'away'
+                            bet_scores[bet_target] += 95 
+                            reasons[bet_target].append(f"Padrão '{pattern.split('(')[0].strip()}' recorrente ({count}x). Espera-se o fechamento do espelho com {c4_pattern.capitalize()}.")
+                            guarantees[bet_target].append(pattern)
 
 
     # --- Nível 3: Sugestões de Confiança Média (Pontuação 40-70) ---
@@ -622,7 +620,7 @@ if 'last_suggestion_confidence' not in st.session_state:
 # --- Função para Adicionar Resultado ---
 def add_result(result_type):
     # 1. Verificar a garantia da rodada ANTERIOR (se houver sugestão com alta confiança)
-    #    Isso é feito ANTES de adicionar o NOVO resultado.
+    # Isso é feito ANTES de adicionar o NOVO resultado.
     if st.session_state.last_suggested_bet_type != 'none' and st.session_state.last_suggestion_confidence >= 70:
         if not check_guarantee_status(st.session_state.last_suggested_bet_type, result_type, st.session_state.last_guarantee_pattern):
             st.session_state.guarantee_failed = True
@@ -657,8 +655,7 @@ def clear_history():
     st.session_state.last_guarantee_pattern = "N/A"
     st.session_state.guarantee_failed = False
     st.session_state.last_suggestion_confidence = 0
-    raise RerunException(get_script_run_ctx())  # Usado aqui para forçar um reset visual completo.
-
+    st.experimental_rerun() # Usado aqui para forçar um reset visual completo.
 # --- Layout ---
 st.header("Registrar Resultado")
 col1, col2, col3 = st.columns(3)
